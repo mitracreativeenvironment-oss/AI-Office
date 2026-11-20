@@ -1,4 +1,4 @@
-﻿// MCE System Logic Test: node scripts/test.mjs
+// MCE System Logic Test: node scripts/test.mjs
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import os from 'node:os';
