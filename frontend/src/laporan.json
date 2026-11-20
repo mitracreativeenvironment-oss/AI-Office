@@ -1,0 +1,62 @@
+{
+  "director": {
+    "ringkasan": "Instruksi Owner diproses: 2 proyek berjalan, 1 persetujuan anggaran Level C tertunda.",
+    "menunggu": [
+      "[Level C] Persetujuan alokasi server staging VPS",
+      "[Level B] Review final draf proposal Dinas Kominfo"
+    ],
+    "mendesak": [
+      "Batas konfirmasi jadwal audit sistem pukul 17:00"
+    ],
+    "angka": [
+      { "label": "Tugas Aktif", "nilai": 8 },
+      { "label": "Divisi Terkoordinasi", "nilai": 6 }
+    ]
+  },
+  "tech_head": {
+    "ringkasan": "Sprint API CI4 & Three.js berjalan lancar; arsitektur modular Fase 1 siap.",
+    "menunggu": [
+      "Review skema relasi database MySQL dengan DB specialist"
+    ],
+    "angka": [
+      { "label": "PR Direview", "nilai": 3 },
+      { "label": "Uptime Servis", "nilai": "99.9%" }
+    ]
+  },
+  "dev_ai": {
+    "ringkasan": "Refactoring antarmuka Virtual Office isometrik 3D selesai.",
+    "mendesak": [],
+    "angka": [
+      { "label": "Komponen", "nilai": 14 },
+      { "label": "FPS Layar", "nilai": 60 }
+    ]
+  },
+  "qa_ai": {
+    "ringkasan": "Audit pengujian unit logika jadwal dan routing koridor 100% lulus.",
+    "menunggu": [],
+    "angka": [
+      { "label": "Tes Lulus", "nilai": 12 },
+      { "label": "Bugs", "nilai": 0 }
+    ]
+  },
+  "service_head": {
+    "ringkasan": "4 permintaan layanan masuk; 2 diagnostik hardware awal selesai.",
+    "menunggu": [
+      "Konfirmasi pengadaan spare part power supply"
+    ],
+    "angka": [
+      { "label": "Tiket Aktif", "nilai": 4 },
+      { "label": "Selesai Hari Ini", "nilai": 2 }
+    ]
+  },
+  "academy_head": {
+    "ringkasan": "Modul pelatihan Pemrograman Web & TIK Dasar telah diperbarui.",
+    "menunggu": [
+      "Verifikasi silabus sertifikasi oleh instansi pembina"
+    ],
+    "angka": [
+      { "label": "Modul Ajar", "nilai": 6 },
+      { "label": "Siswa Terdaftar", "nilai": 32 }
+    ]
+  }
+}

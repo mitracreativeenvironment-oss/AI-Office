@@ -1,0 +1,55 @@
+# MCE (Mitra Creative Environment) - Nginx Production Server Block
+# AI Company Operating System & 3D Virtual Office
+
+server {
+    listen 80;
+    server_name mce.local;
+
+    root /var/www/mce/frontend/dist;
+    index index.html;
+
+    # Frontend Single Page Application (SPA)
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Backend CodeIgniter 4 REST API
+    location /api {
+        alias /var/www/mce/backend/public;
+        try_files $uri $uri/ @backend;
+
+        location ~ \.php$ {
+            include fastcgi_params;
+            fastcgi_param SCRIPT_FILENAME /var/www/mce/backend/public/index.php;
+            fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+            fastcgi_index index.php;
+        }
+    }
+
+    location @backend {
+        rewrite ^/api/(.*)$ /api/index.php/$1 last;
+    }
+
+    # Server-Sent Events (SSE) Realtime Stream
+    # Menonaktifkan buffering agar event SSE terkirim seketika tanpa delay
+    location /api/events {
+        proxy_pass http://127.0.0.1:8080/events;
+        proxy_http_version 1.1;
+        proxy_set_header Connection '';
+        proxy_buffering off;
+        proxy_cache off;
+        chunked_transfer_encoding off;
+        proxy_read_timeout 86400s;
+    }
+
+    # Static assets caching
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, no-transform";
+    }
+
+    # Keamanan: Blokir akses ke berkas tersembunyi
+    location ~ /\. {
+        deny all;
+    }
+}
