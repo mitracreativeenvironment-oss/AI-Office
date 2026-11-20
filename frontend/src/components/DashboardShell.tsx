@@ -7,6 +7,7 @@ import { SchedulingView } from './SchedulingView';
 import { TaskManagementView } from './TaskManagementView';
 import { RuntimeManagementView } from './RuntimeManagementView';
 import { WelfareManagementView } from './WelfareManagementView';
+import { KnowledgeManagementView } from './KnowledgeManagementView';
 import type { ApiResponse, SystemHealthData, DatabaseHealthData } from '../types/api';
 import type { User, Role, SecurityEvent } from '../types/auth';
 import type {
@@ -42,7 +43,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
   const [activeTest, setActiveTest] = useState<string | null>(null);
 
   // Active Tab State
-  const [activeTab, setActiveTab] = useState<'overview' | 'workforce' | 'scheduling' | 'tasks' | 'runtime' | 'welfare' | 'organization' | 'governance' | 'users' | 'roles' | 'audit'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'workforce' | 'scheduling' | 'tasks' | 'runtime' | 'welfare' | 'knowledge' | 'organization' | 'governance' | 'users' | 'roles' | 'audit'>('overview');
 
   // RBAC State
   const [usersList, setUsersList] = useState<User[]>([]);
@@ -308,6 +309,13 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
         </button>
         <button
           type="button"
+          className={`mce-tab-btn ${activeTab === 'knowledge' ? 'mce-tab-active' : ''}`}
+          onClick={() => setActiveTab('knowledge')}
+        >
+          📚 Knowledge Base & Memory
+        </button>
+        <button
+          type="button"
           className={`mce-tab-btn ${activeTab === 'organization' ? 'mce-tab-active' : ''}`}
           onClick={() => setActiveTab('organization')}
         >
@@ -534,6 +542,13 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
       {activeTab === 'welfare' && (
         <section className="mce-card" style={{ padding: 0, background: 'transparent', border: 'none' }}>
           <WelfareManagementView isAuthenticated={!!currentUser} onOpenLogin={onOpenLogin} />
+        </section>
+      )}
+
+      {/* Knowledge Management & Organizational Memory Tab (Prompt 25) */}
+      {activeTab === 'knowledge' && (
+        <section className="mce-card" style={{ padding: 0, background: 'transparent', border: 'none' }}>
+          <KnowledgeManagementView isAuthenticated={!!currentUser} onOpenLogin={onOpenLogin} />
         </section>
       )}
 

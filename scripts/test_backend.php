@@ -925,7 +925,245 @@ $ok = ($code === 200) && is_array($json['data']);
 reportTest('GET', '/welfare/facility-logs', 200, $code, 'Retrieve Facility Operational Usage Logs & Audit', $ok, $pass, $total);
 
 // -----------------------------------------------------------------------------
-// 13. Token Revocation
+// 13. Knowledge Management, Organizational Memory & Wallbook Bridge (Prompt 25)
+// -----------------------------------------------------------------------------
+echo "\n--- Section 13: Knowledge Management & Organizational Memory ---\n";
+
+// 1. Overview Metrics
+[$code, $json] = requestHttp($baseUrl . '/knowledge/overview', 'GET', null, $authToken);
+$ok = ($code === 200) && isset($json['data']['total_records']) && isset($json['data']['by_domain']);
+reportTest('GET', '/knowledge/overview', 200, $code, 'Retrieve Knowledge Management Overview Metrics', $ok, $pass, $total);
+
+// 2. List Knowledge Categories
+[$code, $json] = requestHttp($baseUrl . '/knowledge/categories', 'GET', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 5;
+reportTest('GET', '/knowledge/categories', 200, $code, 'List Cross-Domain Knowledge Categories', $ok, $pass, $total);
+
+// 3. Create Custom Knowledge Category
+$testCatSlug = 'cat-test-' . rand(100, 999);
+[$code, $json] = requestHttp($baseUrl . '/knowledge/categories', 'POST', [
+    'name'        => 'Test Technical Infrastructure',
+    'domain'      => 'technical',
+    'description' => 'Category created during automated integration test.',
+    'display_order' => 99,
+], $authToken);
+$testCatId = $json['data']['id'] ?? 1;
+$ok = ($code === 201) && !empty($json['data']['category_code']);
+reportTest('POST', '/knowledge/categories', 201, $code, 'Create New Knowledge Category in Technical Domain', $ok, $pass, $total);
+
+// 4. List Knowledge Records (Articles)
+[$code, $json] = requestHttp($baseUrl . '/knowledge/records', 'GET', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/knowledge/records', 200, $code, 'List Knowledge Records with Least-Privilege Filtering', $ok, $pass, $total);
+
+// 5. Create Draft Knowledge Record
+$testRecSlug = 'rec-test-' . rand(1000, 9999);
+[$code, $json] = requestHttp($baseUrl . '/knowledge/records', 'POST', [
+    'category_id'           => $testCatId,
+    'slug'                  => $testRecSlug,
+    'title'                 => 'Operational Runbook for Multi-Agent Task Balancing',
+    'summary'               => 'Best practices and procedural flow for task distribution.',
+    'content'               => "# Runbook\n\nStep 1: Check queue depth.\nStep 2: Assign worker.\nStep 3: Log metrics.",
+    'classification_level'  => 'internal',
+    'target_audience'       => 'ai_and_human',
+    'author_agent_id'       => 2, // Tech Lead AI
+    'tags'                  => ['ops', 'runbook', 'balancing'],
+], $authToken);
+$testRecId = $json['data']['id'] ?? null;
+$ok = ($code === 201) && (($json['data']['status'] ?? '') === 'draft');
+reportTest('POST', '/knowledge/records', 201, $code, 'Create Knowledge Record in Draft Status', $ok, $pass, $total);
+
+// 6. Get Single Knowledge Record
+if ($testRecId) {
+    [$code, $json] = requestHttp($baseUrl . "/knowledge/records/{$testRecId}", 'GET', null, $authToken);
+    $ok = ($code === 200) && (($json['data']['id'] ?? null) == $testRecId);
+    reportTest('GET', "/knowledge/records/{$testRecId}", 200, $code, 'Retrieve Single Knowledge Record by ID', $ok, $pass, $total);
+
+    // 7. Update Draft Record
+    [$code, $json] = requestHttp($baseUrl . "/knowledge/records/{$testRecId}", 'PUT', [
+        'title'   => 'Operational Runbook for Multi-Agent Task Balancing v2',
+        'content' => "# Runbook Updated\n\nRefined procedural steps.",
+        'change_summary' => 'Enhanced with validation steps.',
+    ], $authToken);
+    $ok = ($code === 200) && strpos($json['data']['title'] ?? '', 'v2') !== false;
+    reportTest('PUT', "/knowledge/records/{$testRecId}", 200, $code, 'Update Knowledge Record & Generate Draft Version', $ok, $pass, $total);
+
+    // 8. Submit Draft for Review
+    [$code, $json] = requestHttp($baseUrl . "/knowledge/records/{$testRecId}/transition", 'POST', [
+        'target_status' => 'under_review',
+        'reason'        => 'Submitted for independent architectural peer review.',
+    ], $authToken);
+    $ok = ($code === 200) && in_array($json['data']['status'] ?? '', ['under_review', 'submitted']);
+    reportTest('POST', "/knowledge/records/{$testRecId}/transition (submit)", 200, $code, 'Submit Knowledge Record for Independent Review', $ok, $pass, $total);
+
+    // 9. Review Record (Approve)
+    [$code, $json] = requestHttp($baseUrl . "/knowledge/records/{$testRecId}/transition", 'POST', [
+        'target_status' => 'approved',
+        'reason'        => 'Approved following verification of architecture requirements.',
+    ], $authToken);
+    $ok = ($code === 200) && (($json['data']['status'] ?? '') === 'approved');
+    reportTest('POST', "/knowledge/records/{$testRecId}/transition (approve)", 200, $code, 'Peer Review Record & Enforce Zero-Self-Review Gate', $ok, $pass, $total);
+
+    // 10. Publish Approved Record
+    [$code, $json] = requestHttp($baseUrl . "/knowledge/records/{$testRecId}/transition", 'POST', [
+        'target_status' => 'published',
+        'reason'        => 'Publishing article to organizational knowledge base.',
+    ], $authToken);
+    $ok = ($code === 200) && (($json['data']['status'] ?? '') === 'published');
+    reportTest('POST', "/knowledge/records/{$testRecId}/transition (publish)", 200, $code, 'Publish Approved Knowledge Record', $ok, $pass, $total);
+
+    // 11. Archive Record
+    [$code, $json] = requestHttp($baseUrl . "/knowledge/records/{$testRecId}/transition", 'POST', [
+        'target_status' => 'archived',
+        'reason'        => 'Archiving following integration lifecycle verification.',
+    ], $authToken);
+    $ok = ($code === 200) && (($json['data']['status'] ?? '') === 'archived');
+    reportTest('POST', "/knowledge/records/{$testRecId}/transition (archive)", 200, $code, 'Archive Outdated Knowledge Record', $ok, $pass, $total);
+}
+
+// 12. List Knowledge Contributions
+[$code, $json] = requestHttp($baseUrl . '/knowledge/contributions', 'GET', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']);
+reportTest('GET', '/knowledge/contributions', 200, $code, 'List Agent Knowledge Sharing Contributions', $ok, $pass, $total);
+
+// 13. Submit Knowledge Contribution (Agent 3 -> Services Head AI)
+[$code, $json] = requestHttp($baseUrl . '/knowledge/contributions', 'POST', [
+    'contributor_type'     => 'agent',
+    'contributor_agent_id' => 3,
+    'title'                => 'Client Service Incident Prevention Pattern',
+    'domain'               => 'operational',
+    'proposed_classification' => 'internal',
+    'summary'              => 'Pattern for proactive customer inquiry classification.',
+    'content'              => 'Detailing automatic sentiment scoring and rapid ticket routing.',
+    'source_context'       => 'Operational experience from service incident handling.',
+], $authToken);
+$contribId = $json['data']['id'] ?? null;
+$ok = ($code === 201) && (($json['data']['status'] ?? '') === 'submitted');
+reportTest('POST', '/knowledge/contributions', 201, $code, 'Submit AI Agent Knowledge Contribution', $ok, $pass, $total);
+
+// 14. Review Contribution & Award Performance Recognition (Owner approves Agent 3 contribution)
+if ($contribId) {
+    [$code, $json] = requestHttp($baseUrl . "/knowledge/contributions/{$contribId}/review", 'POST', [
+        'decision' => 'approved',
+        'feedback' => 'Contribution verified and ready for corporate dissemination.',
+    ], $authToken);
+    $ok = ($code === 200) && (($json['data']['status'] ?? '') === 'approved');
+    reportTest('POST', "/knowledge/contributions/{$contribId}/review", 200, $code, 'Approve Contribution & Credit Performance History', $ok, $pass, $total);
+}
+
+// 15. List Official Corporate Documents
+[$code, $json] = requestHttp($baseUrl . '/knowledge/documents', 'GET', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/knowledge/documents', 200, $code, 'List Corporate Document Repository Catalog', $ok, $pass, $total);
+
+// 16. Register New Official Document
+$docNumber = 'DOC-POL-TEST-' . rand(100, 999);
+[$code, $json] = requestHttp($baseUrl . '/knowledge/documents', 'POST', [
+    'document_code'        => $docNumber,
+    'title'                => 'Corporate Data Retention & Knowledge Preservation Policy',
+    'document_type'        => 'policy',
+    'domain'               => 'corporate',
+    'classification_level' => 'internal',
+    'storage_path'         => 'policies/data-retention-preservation-v1.pdf',
+    'file_size_bytes'      => 1024 * 32,
+    'mime_type'            => 'application/pdf',
+    'file_checksum'        => hash('sha256', 'mock_doc_data'),
+    'owner_unit_id'        => 1,
+], $authToken);
+$testDocId = $json['data']['id'] ?? null;
+$ok = ($code === 201) && (($json['data']['document_code'] ?? '') === $docNumber);
+reportTest('POST', '/knowledge/documents', 201, $code, 'Register Official Controlled Document with Checksum', $ok, $pass, $total);
+
+// 17. Get Document Detail
+if ($testDocId) {
+    [$code, $json] = requestHttp($baseUrl . "/knowledge/documents/{$testDocId}", 'GET', null, $authToken);
+    $ok = ($code === 200) && (($json['data']['id'] ?? null) == $testDocId);
+    reportTest('GET', "/knowledge/documents/{$testDocId}", 200, $code, 'Retrieve Controlled Document Details & Version Pointer', $ok, $pass, $total);
+
+    // 18. Document Version Revision
+    [$code, $json] = requestHttp($baseUrl . "/knowledge/documents/{$testDocId}/versions", 'POST', [
+        'version_number' => '1.1',
+        'storage_path'   => 'policies/data-retention-preservation-v1.1.pdf',
+        'file_checksum'  => hash('sha256', 'mock_doc_data_v1.1'),
+        'file_size'      => 1024 * 34,
+        'change_summary' => 'Added compliance addendum.',
+    ], $authToken);
+    $ok = ($code === 201) && isset($json['data']['current_version']);
+    reportTest('POST', "/knowledge/documents/{$testDocId}/versions", 201, $code, 'Add Document Release Version Revision & Integrity Checksum', $ok, $pass, $total);
+}
+
+// 19. List Agent Memories (Director AI = 1)
+[$code, $json] = requestHttp($baseUrl . '/knowledge/agents/1/memories', 'GET', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/knowledge/agents/1/memories', 200, $code, 'List Agent Memory Enclave (Working/Episodic/Semantic/Procedural)', $ok, $pass, $total);
+
+// 20. Create Agent Memory Item
+[$code, $json] = requestHttp($baseUrl . '/knowledge/agents/1/memories', 'POST', [
+    'title'                => 'Decision Synthesis Procedural Enclave Check',
+    'memory_type'          => 'procedural',
+    'memory_key'           => 'decision_synthesis_checklist',
+    'content'              => 'Execute stakeholder impact check, verify DoA limits, record in continuous_executive_decisions.',
+    'classification_level' => 'confidential',
+    'importance_score'     => 0.95,
+], $authToken);
+$testMemId = $json['data']['id'] ?? null;
+$ok = ($code === 201) && !empty($json['data']['memory_code']) && !empty($json['data']['id']);
+reportTest('POST', '/knowledge/agents/1/memories', 201, $code, 'Store Structured Agent Memory Enclave Item', $ok, $pass, $total);
+
+// 21. Get Single Memory Item
+if ($testMemId) {
+    [$code, $json] = requestHttp($baseUrl . "/knowledge/memories/{$testMemId}", 'GET', null, $authToken);
+    $ok = ($code === 200) && (($json['data']['id'] ?? null) == $testMemId);
+    reportTest('GET', "/knowledge/memories/{$testMemId}", 200, $code, 'Retrieve Agent Memory Item with Privacy Boundary', $ok, $pass, $total);
+
+    // 22. Promote Memory to Knowledge Contribution
+    [$code, $json] = requestHttp($baseUrl . "/knowledge/memories/{$testMemId}/promote", 'POST', [
+        'title'   => 'Executive Decision Synthesis Procedural Memory Promotion',
+        'domain'  => 'corporate',
+        'summary' => 'Distilled procedural guide promoted from Director AI memory.',
+    ], $authToken);
+    $ok = ($code === 201) && !empty($json['data']['contribution_code']);
+    reportTest('POST', "/knowledge/memories/{$testMemId}/promote", 201, $code, 'Promote Private Memory to Enterprise Knowledge Contribution', $ok, $pass, $total);
+}
+
+// 23. List Wallbook Handover Checklists
+[$code, $json] = requestHttp($baseUrl . '/knowledge/wallbook/1/checklists', 'GET', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/knowledge/wallbook/1/checklists', 200, $code, 'List Wallbook Shift Handover Quality Checklists', $ok, $pass, $total);
+
+// 24. Verify Handover Checklist Item
+$chkId = $json['data'][0]['id'] ?? 1;
+[$code, $json] = requestHttp($baseUrl . "/knowledge/wallbook/checklists/{$chkId}", 'POST', [
+    'is_satisfied' => 1,
+    'notes'        => 'E2E Verification Checklist Validated by Operational Auditor.',
+], $authToken);
+$ok = ($code === 200) && (($json['data']['is_satisfied'] ?? 0) == 1);
+reportTest('POST', "/knowledge/wallbook/checklists/{$chkId}", 200, $code, 'Verify Wallbook Shift Handover Quality Checklist Item', $ok, $pass, $total);
+
+// 25. Promote Wallbook Handover Item to Knowledge Contribution
+[$code, $json] = requestHttp($baseUrl . '/knowledge/wallbook/1/items/1/promote', 'POST', [
+    'title'           => 'Morning-to-Afternoon Transition Critical Observations',
+    'summary'         => 'Shift transition takeaways promoted into reusable organizational memory.',
+    'proposed_domain' => 'operational',
+], $authToken);
+$ok = ($code === 201) && !empty($json['data']['contribution_code']);
+reportTest('POST', '/knowledge/wallbook/1/items/1/promote', 201, $code, 'Promote Shift Handover Insights to Knowledge Contribution', $ok, $pass, $total);
+
+// 26. Multi-Domain Search
+[$code, $json] = requestHttp($baseUrl . '/knowledge/search?q=governance', 'GET', null, $authToken);
+$ok = ($code === 200) && isset($json['data']['results']) && is_array($json['data']['results']);
+reportTest('GET', '/knowledge/search?q=governance', 200, $code, 'Unified Multi-Domain Search Across KB, Docs & Memories', $ok, $pass, $total);
+
+// 27. AI RAG Context Retrieval
+[$code, $json] = requestHttp($baseUrl . '/knowledge/rag/retrieve', 'POST', [
+    'query'    => 'What are the delegation of authority approval thresholds?',
+    'agent_id' => 1,
+], $authToken);
+$ok = ($code === 200) && isset($json['data']['context_chunks']) && isset($json['data']['chunks_count']);
+reportTest('POST', '/knowledge/rag/retrieve', 200, $code, 'AI RAG Context Retrieval with Authorization & Provenance', $ok, $pass, $total);
+
+// -----------------------------------------------------------------------------
+// 14. Token Revocation
 // -----------------------------------------------------------------------------
 [$code, $json] = requestHttp($baseUrl . '/auth/logout', 'POST', null, $authToken);
 $ok = ($code === 200) && (($json['data']['revoked'] ?? false) === true);

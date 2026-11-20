@@ -6,6 +6,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.0] - 2026-11-20 — Knowledge Management, Organizational Memory, Wallbook & Agent Knowledge Sharing Milestone (Prompt 25)
+
+### Added
+- **Database Schema Batch 10 (`CreateKnowledgeManagementAndMemorySchema.php`)**:
+  - Implemented 11 relational tables: `knowledge_categories`, `knowledge_records`, `knowledge_versions`, `knowledge_access_policies`, `knowledge_contributions`, `documents`, `document_versions`, `agent_memories`, `agent_memory_versions`, `wallbook_handover_checklists`, `knowledge_retrieval_logs`.
+  - Added 5-domain categorization: `corporate`, `operational`, `project`, `technical`, `agent_knowledge`.
+  - Added 5-tier information classification: `public`, `internal`, `confidential`, `restricted`, `highly_restricted`.
+  - Added immutable knowledge and document versioning with cryptographic SHA-256 checksums and MIME type tracking.
+  - Added 4 cognitive agent memory types: `working_memory`, `episodic_memory`, `semantic_memory`, `procedural_memory`.
+  - Added shift handover quality checklists (`wallbook_handover_checklists`) extending the existing Wallbook module without duplication.
+- **Database Seeder (`KnowledgeManagementSeeder.php`)**:
+  - Seeded 7 categories, 5 baseline authoritative knowledge articles with version 1.0 entries.
+  - Seeded 3 controlled documents (Company Constitution, Security Policy, Architecture Spec).
+  - Seeded 4 baseline agent memories for Director AI and Tech Lead AI.
+  - Seeded 4-point handover quality checklists for existing shift handovers.
+- **Backend Domain Services**:
+  - `KnowledgeAccessService.php`: Least-privilege clearance matrix and audience filtering.
+  - `KnowledgeBaseService.php`: Article lifecycle management, version history, status state machine, overview aggregation.
+  - `KnowledgeContributionService.php`: Candidate submission, Zero-Self-Review peer reviews, automated recognition crediting in `ai_agent_performance_history`.
+  - `DocumentManagementService.php`: Controlled document repository, cryptographic validation, revisioning.
+  - `AgentMemoryService.php`: Agent memory enclaves with privacy boundaries and memory-to-knowledge promotion.
+  - `WallbookKnowledgeBridgeService.php`: 4-point handover quality checklists and shift observation knowledge promoter.
+  - `KnowledgeSearchService.php`: Multi-domain fulltext search, RAG context retrieval for Hermes runtime, prompt injection safety, forensic query logging.
+- **REST API Controller & Routes**:
+  - `KnowledgeController.php`: 26 REST API endpoints under `/api/v1/knowledge/*` with standardized envelopes and auth filters.
+- **Frontend Integration**:
+  - `knowledge.ts`: Complete TypeScript types and interfaces.
+  - `knowledgeService.ts`: API client service for all 26 endpoints.
+  - `KnowledgeManagementView.tsx`: Enterprise knowledge view with 8 operational tabs (Overview, Knowledge Base, Documents, Agent Memory, Wallbook Bridge, Contributions, Search, AI RAG Retrieval).
+  - Mounted in `NavigationHeader.tsx`, `App.tsx`, and `DashboardShell.tsx`.
+- **Testing & Quality Assurance**:
+  - `KnowledgeManagementTest.php`: 12 PHPUnit tests, 83 assertions passing 100% (87 total backend tests, 597 assertions passing 100%).
+  - `scripts/test_backend.php`: Section 13 added, 157/157 REST integration endpoints passing 100%.
+  - `npm --prefix frontend run build`: Clean production compilation with Vite (0 errors).
+- **Documentation**:
+  - Created `docs/architecture/KNOWLEDGE-MANAGEMENT-ARCHITECTURE.md`.
+  - Created `docs/architecture/ORGANIZATIONAL-MEMORY-MODEL.md`.
+  - Created `docs/architecture/AGENT-MEMORY-ARCHITECTURE.md`.
+  - Created `docs/architecture/WALLBOOK-KNOWLEDGE-INTEGRATION.md`.
+  - Created `docs/operations/KNOWLEDGE-OPERATIONS.md`.
+  - Created `docs/api/KNOWLEDGE-API.md`.
+  - Created `docs/implementation/KNOWLEDGE-IMPLEMENTATION.md`.
+
+---
+
 ## [0.9.0] - 2026-11-20 — Agent Welfare Facilities, Welfare Tickets & Agent Welfare Operations Milestone (Prompt 24)
 
 ### Added

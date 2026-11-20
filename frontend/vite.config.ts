@@ -11,6 +11,8 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
         secure: false,
+        // Forward the client's /api/v1/... path verbatim to the backend.
+        rewrite: (path) => path,
       },
     },
   },

@@ -18,7 +18,7 @@
  * Data dipetakan dari /api/v1/vhq/* (CampusOverview, AgentPresence, HqWorkstation, HqRoom).
  */
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, forwardRef } from 'react';
 import {
   AmbientLight, BoxGeometry, CylinderGeometry, Color, DirectionalLight, Fog, Group,
   HemisphereLight, Mesh, MeshStandardMaterial, PlaneGeometry, PointLight, Scene, SphereGeometry, WebGLRenderer,
@@ -44,6 +44,7 @@ export interface Ruang {
   x0: number; x1: number;
   warna: string;
   karpet: string;
+  edge: string;
 }
 
 export interface LaporanAgen {
@@ -62,7 +63,12 @@ const rugColor = (floor: string, accent: string) => {
 };
 
 // Kelompok gedung menjadi 3 zona
-const zonaGedung: Record<string, string> = {'__DIAG__': 'x'};
+const zonaGedung: Record<string, string> = {
+  'BLD-MAIN': '#0e7490',
+  'BLD-DIV-TECH': '#7c3aed',
+  'BLD-DIV-SRV': '#b45309',
+  'BLD-DIV-ACAD': 'welfare', 'BLD-DIV-HW': 'welfare', 'BLD-WELFARE': 'welfare',
+};
 
 const zonaLabel: Record<string, string> = {
   core: 'Eksekutif & Koordinasi',
@@ -79,6 +85,7 @@ export interface MceKantorSceneProps {
   presences: AgentPresence[];
   workstations: HqWorkstation[];
   rooms: HqRoom[];
+  onAgentSync?: (agent: AgentPresence) => void;
 }
 
 // ---------- Agent figure (style template: body+head+arm+leg+screen+desk+desk) ----------
@@ -171,13 +178,16 @@ function screenCanvas(label: string, status: PresenceStatus): HTMLCanvasElement 
 }
 
 // --- MceKantorScene ---
-export const MceKantorScene: React.FC<MceKantorSceneProps> = ({ campus, presences, workstations, rooms }) => {
+export const MceKantorScene = forwardRef<HTMLDivElement, MceKantorSceneProps>(({ campus, presences, workstations, rooms, onAgentSync }, ref) => {
   const hostRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<Scene | null>(null);
   const cameraRef = useRef<any>(null);
   const rendererRef = useRef<any>(null);
   const groupsRef = useRef<Map<string, Group>>(new Map());
-  const gayaRef = useRef<string>('asli');
+  const syncAgentRef = useRef<(agent: AgentPresence) => void>(() => {});
+  const agentGroupsRef = useRef<Map<string, any>>(new Map());
+  const highlightRef = useRef<Map<string, { ring: any; pulse: number }>>(new Map());
+  const agentStatesRef = useRef<Map<string, boolean>>(new Map());
   const [night, setNight] = useState<boolean>(false);
 
   // --- Data terpetakan dari VHQ ---
@@ -191,20 +201,22 @@ export const MceKantorScene: React.FC<MceKantorSceneProps> = ({ campus, presence
 
     // Ruang = 3 zona (dari gedung aktual)
     const zones: Ruang[] = [
-      { key: 'core', label: zonaLabel.core, x0: -5.6, x1: -1.6, warna: '#0f172a', karpet: rugColor('#0f172a', '#38bdf8') },
-      { key: 'ops',  label: zonaLabel.ops,  x0: -1.6, x1:  1.6, warna: '#efe3cf', karpet: rugColor('#efe3cf', '#2563eb') },
-      { key: 'welfare', label: zonaLabel.welfare, x0: 1.6, x1: 5.6, warna: '#e3d6c6', karpet: rugColor('#e3d6c6', '#10b981') },
+      { key: 'core', label: zonaLabel.core, x0: -5.6, x1: -1.6, warna: '#0f172a', karpet: rugColor('#0f172a', '#38bdf8'), edge: '#38bdf8' },
+      { key: 'ops',  label: zonaLabel.ops,  x0: -1.6, x1:  1.6, warna: '#efe3cf', karpet: rugColor('#efe3cf', '#2563eb'), edge: '#2563eb' },
+      { key: 'welfare', label: zonaLabel.welfare, x0: 1.6, x1: 5.6, warna: '#e3d6c6', karpet: rugColor('#e3d6c6', '#10b981'), edge: '#10b981' },
     ];
 
     // Agen yang punya posisi spasial (dari VHQ) -> barisan meja
     const agents: Agen[] = (presences || [])
       .filter((p: AgentPresence) => p.has_spatial_placement && p.placement)
       .map((p: AgentPresence) => {
-        const pl = p.placement!;
+        if (!p.has_spatial_placement || !p.placement) return null;
+        const pl = p.placement;
         const ws = wsById.get(pl.workstation_id as number);
         const building = buildingById.get(pl.building_id as number);
         const zone = kelompokZona(building?.building_code || 'ops');
-        const ruang = zones.find((z) => z.key === zone)!;
+        const ruang = zones.find((z) => z.key === zone);
+        if (!ruang) return null;
         const st = p.presence_status;
         // warna jersey = aksen zone/gedung, modalitas status
         let warna = building?.accent_color || '#38bdf8';
@@ -223,7 +235,8 @@ export const MceKantorScene: React.FC<MceKantorSceneProps> = ({ campus, presence
           x: ruang.x0 + (Math.abs(pl.pos_x) % ruang.x1) + 0.6,
           z: pl.pos_z ?? -2.8,
         };
-      });
+      })
+      .filter((a): a is Agen => a !== null);
 
     // Laporan per agen (dari active task / status)
     const laporan: Record<string, LaporanAgen> = {};
@@ -264,12 +277,14 @@ export const MceKantorScene: React.FC<MceKantorSceneProps> = ({ campus, presence
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(host.clientWidth, host.clientHeight);
     rendererRef.current = renderer;
+    ;(window as any).__RENDERER = renderer;
     host.appendChild(renderer.domElement);
 
     const scene = new (window as any).THREE.Scene();
     scene.background = null;
     scene.fog = new (window as any).THREE.Fog(0x060a18, 40, 140);
     sceneRef.current = scene;
+    ;(window as any).__SCENE = scene;
 
     const camera = new (window as any).THREE.PerspectiveCamera(40, host.clientWidth / host.clientHeight, 0.1, 200);
     camera.position.set(0, 8, 14);
@@ -283,29 +298,35 @@ export const MceKantorScene: React.FC<MceKantorSceneProps> = ({ campus, presence
     scene.add(amb, sun, hemi);
 
     // --- Bangun zona ---
-    const buildZone = (key: string, label: string, x0: number, x1: number, floorHex: string, rugHex: string) => {
+    const buildZone = (key: string, label: string, x0: number, x1: number, floorHex: string, rugHex: string, edgeHex: string) => {
       const g = new Group();
       const zBase = -2.9;
       const w = (x1 - x0) / 2;
       const h = 2.6;
       const d = 1.6;
       const fx = (x0 + x1) / 2;
+      const floorInt = parseInt(floorHex.replace('#',''), 16);
+      const rugInt = parseInt(rugHex.replace('#',''), 16);
+      const edgeInt = parseInt(edgeHex.replace('#',''), 16);
 
-      // lantai
-      const floorMat = new (window as any).THREE.MeshStandardMaterial({ color: parseInt(floorHex.replace('#',''), 16), roughness: 0.8 });
+      // lantai (lebih terang untuk grounding yang jelas)
+      const floorMat = new (window as any).THREE.MeshStandardMaterial({ color: floorInt, roughness: 0.8 });
       const floorMesh = new (window as any).THREE.Mesh(new (window as any).THREE.PlaneGeometry(w*2, d), floorMat);
       floorMesh.rotation.x = -Math.PI / 2; floorMesh.position.set(fx, 0.02, zBase - d/2); scene.add(floorMesh);
       // karpet
-      const rugMat = new (window as any).THREE.MeshStandardMaterial({ color: parseInt(rugHex.replace('#',''), 16), roughness: 0.9 });
-      const rugMesh = new (window as any).THREE.Mesh(new (window as any).THREE.PlaneGeometry(w-0.4, d-0.4), rugMat);
-      rugMesh.rotation.x = -Math.PI / 2; rugMesh.position.set(fx, 0.04, zBase - d/2 + 0.16); scene.add(rugMesh);
+      const rugMat = new (window as any).THREE.MeshStandardMaterial({ color: rugInt, roughness: 0.95 });
+      const rugMesh = new (window as any).THREE.Mesh(new (window as any).THREE.PlaneGeometry(w-0.5, d-0.5), rugMat);
+      rugMesh.rotation.x = -Math.PI / 2; rugMesh.position.set(fx, 0.045, zBase - d/2 + 0.18); scene.add(rugMesh);
       // langit-langit
       const ceil = new (window as any).THREE.Mesh(new (window as any).THREE.PlaneGeometry(w*2, d), new (window as any).THREE.MeshStandardMaterial({ color: 0x0a1020, roughness: 0.9, side: (window as any).THREE.DoubleSide }));
       ceil.rotation.x = Math.PI / 2; ceil.position.set(fx, h+0.12, zBase - d/2); scene.add(ceil);
 
-      // garis zona
+      // border zona (edge): garis kontras di tepi lantai
+      const edgeLine = new (window as any).THREE.Mesh(new (window as any).THREE.EdgesGeometry(floorMesh.geometry, 4), new (window as any).THREE.LineBasicMaterial({ color: edgeInt, transparent: true, opacity: 0.9 }));
+      edgeLine.rotation.x = -Math.PI / 2; edgeLine.position.y = 0.03; scene.add(edgeLine);
+      // garis bantu subdua
       for (let i = 1; i < 4; i++) {
-        const ln = new (window as any).THREE.Mesh(new (window as any).THREE.PlaneGeometry(0.03, d+0.3), new (window as any).THREE.MeshStandardMaterial({ color: 0x334155, transparent: true, opacity: 0.3 }));
+        const ln = new (window as any).THREE.Mesh(new (window as any).THREE.PlaneGeometry(0.02, d+0.3), new (window as any).THREE.MeshStandardMaterial({ color: 0x334155, transparent: true, opacity: 0.2 }));
         ln.rotation.x = -Math.PI / 2; ln.position.set(fx, i*0.00001 + 0.02, zBase - d/2); scene.add(ln);
       }
 
@@ -318,7 +339,7 @@ export const MceKantorScene: React.FC<MceKantorSceneProps> = ({ campus, presence
 
     const zoneGroups = new Map<string, any>();
     sceneData.zones.forEach((z) => {
-      const g = buildZone(z.key, z.label, z.x0, z.x1, z.warna, z.karpet);
+      const g = buildZone(z.key, z.label, z.x0, z.x1, z.warna, z.karpet, z.edge);
       zoneGroups.set(z.key, g.zoneGroup);
     });
 
@@ -326,38 +347,96 @@ export const MceKantorScene: React.FC<MceKantorSceneProps> = ({ campus, presence
     const nightLamp = new (window as any).THREE.PointLight(0x60a5fa, 1.2, 16, 2);
     nightLamp.position.set(0, 10, 0); scene.add(nightLamp);
 
+    // Live sync (VHQ live presences) -> parent calls this on each refresh.
+    const syncAgent = (agent: AgentPresence) => {
+      const buildingId = agent.placement?.building_id;
+      const building = campus?.buildings?.find((b) => b.id === buildingId);
+      const zone = kelompokZona(building?.building_code || 'ops');
+      const zg = zoneGroups.get(zone);
+      if (!zg) return;
+      const f = zg.children.find((ch: any) => ch._agentKey === agent.agent_code);
+      if (!f) return;
+      agentStatesRef.current.set(agent.agent_code, agent.active_task?.priority === 'urgent');
+      updateScreen(f, agent);
+      onAgentSync?.(agent);
+    };
+    syncAgentRef.current = syncAgent;
+
+    const updateScreen = (group: any, agent: AgentPresence) => {
+      const tmpCanvas = group.tmpCanvas || (group.tmpCanvas = document.createElement('canvas'));
+      const ctx = tmpCanvas.getContext('2d')!;
+      tmpCanvas.width = 256; tmpCanvas.height = 160;
+      ctx.fillStyle = '#111'; ctx.fillRect(0, 0, 256, 160);
+      ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 34px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(agent.active_task?.title?.slice(0, 12) || '●', 128, 52);
+
+      const urgent = agent.active_task?.priority === 'urgent';
+      let label = 'Siaga';
+      let col = '#94a3b8';
+      if (urgent) { label = '⚠ URGENT'; col = '#fbbf24'; }
+      else if (agent.presence_status === 'working') { label = 'Bekerja'; col = '#34d399'; }
+      else if (agent.presence_status === 'available') { label = 'Siaga'; col = '#38bdf8'; }
+      else if (agent.presence_status === 'on_leave') { label = 'Cuti'; col = '#a855f7'; }
+      else if (agent.presence_status === 'suspended' || agent.presence_status === 'runtime_disconnected') { label = '✕'; col = '#f43f5e'; }
+
+      if (urgent) {
+        ctx.fillStyle = '#fff27a'; ctx.font = 'bold 30px sans-serif'; ctx.fillText('⚠', 128, 50);
+        ctx.fillStyle = col; ctx.font = 'bold 32px sans-serif'; ctx.fillText(label, 128, 96);
+        ctx.fillStyle = '#fff27a'; ctx.font = 'bold 24px sans-serif'; ctx.fillText(agent.active_task?.title?.slice(0, 8) || '', 128, 130);
+      } else {
+        ctx.fillStyle = col; ctx.font = 'bold 26px sans-serif'; ctx.fillText(label, 128, 104);
+      }
+      const tex = new (window as any).THREE.CanvasTexture(tmpCanvas);
+      tex.needsUpdate = true;
+      const screenMesh = group.children.find((ch: any) => ch.geometry && ch.geometry.type === 'PlaneGeometry');
+      if (screenMesh) {
+        (screenMesh.material as any).map = tex;
+        (screenMesh.material as any).needsUpdate = true;
+      }
+      (group as any).isUrgent = urgent;
+    };
+
     let animId = 0; let clock = 0;
 
     const renderLoop = () => {
       animId = requestAnimationFrame(renderLoop);
       clock += 0.016;
-      const t = clock;
-
-      // mode malam: lampu layu, langit-langit gelap, layar redup
       const nightFactor = night ? 0.18 : 1;
       amb.intensity = night ? 0.18 : 0.55;
       sun.intensity = night ? 0.16 : 1.1;
       hemi.intensity = night ? 0.12 : 0.65;
       nightLamp.intensity = night ? 0.3 : 1.2;
 
-      // buat text layar terbaru
+      // selection highlight (pulse ring)
+      highlightRef.current.forEach((h) => {
+        h.ring.scale.x = h.pulse + Math.sin(clock * 6) * 0.12;
+        h.ring.material.opacity = 0.7 + Math.sin(clock * 3) * 0.12;
+      });
+      // urgent shake/bob
+      agentStatesRef.current.forEach((urgent, key) => {
+        const f = agentGroupsRef.current.get(key);
+        if (!f) return;
+        if (urgent) f.position.y += Math.sin(clock * 3) * 0.002;
+      });
+
+      // Agent figures (reuse existing, recreate only when new)
       (sceneData.agents || []).forEach((ag: any, i: number) => {
         const zg = zoneGroups.get(ag.ruang);
         if (!zg) return;
-        const existing = zg.children.find((ch: any) => ch._agentKey === ag.key);
-        if (existing) {
-          // actualize without rebuild
+        const f = zg.children.find((ch: any) => ch._agentKey === ag.key);
+        if (!f) {
+          const idxInZone = (i * 0.48) % 1;
+          const fx = (ag.ruang.x0 + ag.ruang.x1) / 2;
+          const deskX = fx + idxInZone * (ag.ruang.x1 - ag.ruang.x0 - 1.2) / Math.max(1, sceneData.agents.length - 1);
+          const figure = agentFigureGroup(ag.warna, '#2b1d16', deskX, 0.30);
+          (figure as any)._agentKey = ag.key;
+          (figure as any)._availability = nightFactor;
+          zg.add(figure);
           return;
         }
-        const idxInZone = (i * 0.48) % 1;
-        const fx = (ag.ruang.x0 + ag.ruang.x1) / 2;
-        const ws = workstations.find((w) => w.assigned_agent_id == null);
-        // latar belakang agen di zona
-        const deskX = fx + idxInZone * (ag.ruang.x1 - ag.ruang.x0 - 1.2) / Math.max(1, sceneData.agents.length - 1);
-        const figure = agentFigureGroup(ag.warna, '#2b1d16', deskX, 0.30);
-        (figure as any)._agentKey = ag.key;
-        (figure as any)._availability = nightFactor;
-        zg.add(figure);
+        // Live-refresh the agent screen from current VHQ presences.
+        const agent = presences.find((p) => p.agent_code === ag.key);
+        if (agent) updateScreen(f, agent);
       });
 
       renderer.render(scene, camera);
@@ -409,6 +488,6 @@ export const MceKantorScene: React.FC<MceKantorSceneProps> = ({ campus, presence
       </div>
     </div>
   );
-};
+});
 
 export default MceKantorScene;

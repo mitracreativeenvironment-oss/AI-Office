@@ -10,7 +10,17 @@ class CorsFilter implements FilterInterface
 {
     private function getAllowedOrigin(): string
     {
-        return env('mce.frontendURL', 'http://localhost:5173');
+        $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+        $allowed = [
+            'http://localhost:5173',
+            'http://localhost:4173',
+        ];
+        foreach ($allowed as $a) {
+            if ($origin === $a) {
+                return $origin;
+            }
+        }
+        return 'http://localhost:5173';
     }
 
     public function before(RequestInterface $request, $arguments = null)

@@ -5,26 +5,29 @@ import { VhqView } from './components/VhqView';
 import { LoginPage } from './components/LoginPage';
 import { RuntimeManagementView } from './components/RuntimeManagementView';
 import { WelfareManagementView } from './components/WelfareManagementView';
+import { KnowledgeManagementView } from './components/KnowledgeManagementView';
 import { apiClient } from './services/apiClient';
 import { authService } from './services/authService';
 import type { User } from './types/auth';
 
 export default function App() {
-  const getInitialView = (): 'dashboard' | 'vhq' | 'runtime' | 'welfare' => {
+  const getInitialView = (): 'dashboard' | 'vhq' | 'runtime' | 'welfare' | 'knowledge' => {
     const hash = window.location.hash.toLowerCase();
     if (hash === '#vhq' || hash === '#/vhq') return 'vhq';
     if (hash === '#dashboard' || hash === '#/dashboard') return 'dashboard';
     if (hash === '#runtime' || hash === '#/runtime') return 'runtime';
     if (hash === '#welfare' || hash === '#/welfare') return 'welfare';
+    if (hash === '#knowledge' || hash === '#/knowledge') return 'knowledge';
     const params = new URLSearchParams(window.location.search);
     const viewParam = params.get('view');
     if (viewParam === 'vhq') return 'vhq';
     if (viewParam === 'runtime') return 'runtime';
     if (viewParam === 'welfare') return 'welfare';
+    if (viewParam === 'knowledge') return 'knowledge';
     return 'dashboard';
   };
 
-  const [currentView, setCurrentView] = useState<'dashboard' | 'vhq' | 'runtime' | 'welfare'>(getInitialView);
+  const [currentView, setCurrentView] = useState<'dashboard' | 'vhq' | 'runtime' | 'welfare' | 'knowledge'>(getInitialView);
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'degraded' | 'offline'>('checking');
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
 
@@ -73,7 +76,7 @@ export default function App() {
     return () => clearInterval(timer);
   }, [checkConnectivity, restoreSession]);
 
-  const handleNavigate = (view: 'dashboard' | 'vhq' | 'runtime' | 'welfare') => {
+  const handleNavigate = (view: 'dashboard' | 'vhq' | 'runtime' | 'welfare' | 'knowledge') => {
     setCurrentView(view);
     window.location.hash = `#${view}`;
   };
@@ -116,8 +119,13 @@ export default function App() {
           <VhqView onBackToDashboard={() => handleNavigate('dashboard')} />
         ) : currentView === 'runtime' ? (
           <RuntimeManagementView />
-        ) : (
+        ) : currentView === 'welfare' ? (
           <WelfareManagementView
+            isAuthenticated={!!currentUser}
+            onOpenLogin={() => setIsLoginOpen(true)}
+          />
+        ) : (
+          <KnowledgeManagementView
             isAuthenticated={!!currentUser}
             onOpenLogin={() => setIsLoginOpen(true)}
           />

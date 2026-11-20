@@ -292,4 +292,36 @@ $routes->group('api/v1', static function ($routes) {
             $routes->post('facility-sessions/(:num)/check-out', 'Api\WelfareController::checkOutFacility/$1');
         });
     });
+
+    // Knowledge Management, Organizational Memory & Wallbook Bridge (Prompt 25)
+    $routes->group('knowledge', static function ($routes) {
+        $routes->get('overview', 'Api\KnowledgeController::overview');
+        $routes->get('categories', 'Api\KnowledgeController::listCategories');
+        $routes->get('records', 'Api\KnowledgeController::listRecords');
+        $routes->get('records/(:num)', 'Api\KnowledgeController::showRecord/$1');
+        $routes->get('contributions', 'Api\KnowledgeController::listContributions');
+        $routes->get('contributions/(:num)', 'Api\KnowledgeController::showContribution/$1');
+        $routes->get('documents', 'Api\KnowledgeController::listDocuments');
+        $routes->get('documents/(:num)', 'Api\KnowledgeController::showDocument/$1');
+        $routes->get('wallbook/(:num)/checklists', 'Api\KnowledgeController::listWallbookChecklists/$1');
+        $routes->get('search', 'Api\KnowledgeController::search');
+
+        $routes->group('', ['filter' => 'mce_auth'], static function ($routes) {
+            $routes->get('agents/(:num)/memories', 'Api\KnowledgeController::listAgentMemories/$1');
+            $routes->get('memories/(:num)', 'Api\KnowledgeController::showMemory/$1');
+            $routes->post('categories', 'Api\KnowledgeController::createCategory');
+            $routes->post('records', 'Api\KnowledgeController::createRecord');
+            $routes->put('records/(:num)', 'Api\KnowledgeController::updateRecord/$1');
+            $routes->post('records/(:num)/transition', 'Api\KnowledgeController::transitionRecord/$1');
+            $routes->post('contributions', 'Api\KnowledgeController::submitContribution');
+            $routes->post('contributions/(:num)/review', 'Api\KnowledgeController::reviewContribution/$1');
+            $routes->post('documents', 'Api\KnowledgeController::registerDocument');
+            $routes->post('documents/(:num)/versions', 'Api\KnowledgeController::addDocumentVersion/$1');
+            $routes->post('agents/(:num)/memories', 'Api\KnowledgeController::createAgentMemory/$1');
+            $routes->post('memories/(:num)/promote', 'Api\KnowledgeController::promoteMemory/$1');
+            $routes->post('wallbook/checklists/(:num)', 'Api\KnowledgeController::updateWallbookChecklist/$1');
+            $routes->post('wallbook/(:num)/items/(:num)/promote', 'Api\KnowledgeController::promoteWallbookItem/$1/$2');
+            $routes->post('rag/retrieve', 'Api\KnowledgeController::ragRetrieve');
+        });
+    });
 });
