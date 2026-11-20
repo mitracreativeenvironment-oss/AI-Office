@@ -3,6 +3,7 @@
 use CodeIgniter\Test\CIUnitTestCase;
 use Config\App;
 use Tests\Support\Libraries\ConfigReader;
+use App\Controllers\Api\HealthController;
 
 /**
  * @internal
@@ -26,9 +27,6 @@ final class HealthTest extends CIUnitTestCase
         }
 
         if ($env) {
-            // BaseURL in .env is a valid URL?
-            // phpunit.dist.xml sets app.baseURL in $_SERVER
-            // So if you set app.baseURL in .env, it takes precedence
             $config = new App();
             $this->assertTrue(
                 $validation->check($config->baseURL, 'valid_url'),
@@ -36,14 +34,17 @@ final class HealthTest extends CIUnitTestCase
             );
         }
 
-        // Get the baseURL in app/Config/App.php
-        // You can't use Config\App, because phpunit.dist.xml sets app.baseURL
         $reader = new ConfigReader();
-
-        // BaseURL in app/Config/App.php is a valid URL?
         $this->assertTrue(
             $validation->check($reader->baseURL, 'valid_url'),
             'baseURL "' . $reader->baseURL . '" in app/Config/App.php is not valid URL',
         );
     }
+
+    public function testHealthControllerInstantiates(): void
+    {
+        $controller = new HealthController();
+        $this->assertInstanceOf(HealthController::class, $controller);
+    }
 }
+

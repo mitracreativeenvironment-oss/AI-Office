@@ -9,12 +9,224 @@ $routes->get('/', 'Home::index');
 // MCE REST API v1
 // ==========================================
 $routes->group('api/v1', static function ($routes) {
-    // Health Check
+    // Health Checks
     $routes->get('health', 'Api\HealthController::index');
+    $routes->get('health/database', 'Api\HealthController::database');
+
+    // Authentication Endpoints
+    $routes->group('auth', static function ($routes) {
+        $routes->post('login', 'Api\AuthController::login');
+
+        // Protected Auth Routes (Require Bearer Token)
+        $routes->group('', ['filter' => 'mce_auth'], static function ($routes) {
+            $routes->get('me', 'Api\AuthController::me');
+            $routes->post('logout', 'Api\AuthController::logout');
+            $routes->post('change-password', 'Api\AuthController::changePassword');
+        });
+    });
+
+    // Identity & RBAC Administration (Protected & Permission Enforced)
+    $routes->group('admin', ['filter' => 'mce_auth'], static function ($routes) {
+        $routes->get('users', 'Api\AdminController::listUsers', ['filter' => 'mce_permission:users.view']);
+        $routes->get('users/(:num)', 'Api\AdminController::getUser/$1', ['filter' => 'mce_permission:users.view']);
+        $routes->post('users', 'Api\AdminController::createUser', ['filter' => 'mce_permission:users.create']);
+        $routes->post('users/(:num)/disable', 'Api\AdminController::disableUser/$1', ['filter' => 'mce_permission:users.disable']);
+        $routes->post('users/(:num)/enable', 'Api\AdminController::enableUser/$1', ['filter' => 'mce_permission:users.disable']);
+        $routes->get('roles', 'Api\AdminController::listRoles', ['filter' => 'mce_permission:roles.view']);
+        $routes->get('permissions', 'Api\AdminController::listPermissions', ['filter' => 'mce_permission:permissions.view']);
+        $routes->post('users/(:num)/roles', 'Api\AdminController::assignUserRole/$1', ['filter' => 'mce_permission:roles.assign']);
+        $routes->get('audit-logs', 'Api\AdminController::listAuditLogs', ['filter' => 'mce_permission:audit.view']);
+    });
 
     // Company Profile & Divisions
     $routes->get('company', 'Api\CompanyController::profile');
     $routes->get('divisions', 'Api\CompanyController::divisions');
+
+    // Organization Structure (Multi-level Hierarchy, Positions, Appointments)
+    $routes->group('organization', static function ($routes) {
+        $routes->get('tree', 'Api\OrganizationController::tree');
+        $routes->get('units', 'Api\OrganizationController::units');
+        $routes->get('units/(:num)', 'Api\OrganizationController::showUnit/$1');
+        $routes->get('positions', 'Api\OrganizationController::positions');
+        $routes->get('positions/(:num)', 'Api\OrganizationController::showPosition/$1');
+        $routes->get('appointments', 'Api\OrganizationController::appointments');
+        $routes->get('reporting', 'Api\OrganizationController::reporting');
+
+        // Mutating endpoints (Protected by Bearer Token)
+        $routes->group('', ['filter' => 'mce_auth'], static function ($routes) {
+            $routes->post('units', 'Api\OrganizationController::createUnit');
+            $routes->put('units/(:num)', 'Api\OrganizationController::updateUnit/$1');
+            $routes->post('positions', 'Api\OrganizationController::createPosition');
+            $routes->post('appointments', 'Api\OrganizationController::createAppointment');
+            $routes->post('appointments/(:num)/end', 'Api\OrganizationController::endAppointment/$1');
+            $routes->post('reporting', 'Api\OrganizationController::addReporting');
+        });
+    });
+
+    // Corporate Governance, DoA, Owner Directions & Executive Decisions
+    $routes->group('governance', static function ($routes) {
+        $routes->get('core-values', 'Api\GovernanceController::coreValues');
+        $routes->get('bodies', 'Api\GovernanceController::bodies');
+        $routes->get('bodies/(:num)', 'Api\GovernanceController::showBody/$1');
+        $routes->get('authority-profiles', 'Api\GovernanceController::authorityProfiles');
+        $routes->post('authority-check', 'Api\GovernanceController::authorityCheck');
+        $routes->get('delegations', 'Api\GovernanceController::delegations');
+        $routes->get('delegations/(:num)', 'Api\GovernanceController::showDelegation/$1');
+        $routes->get('directions', 'Api\GovernanceController::directions');
+        $routes->get('directions/(:num)', 'Api\GovernanceController::showDirection/$1');
+        $routes->get('decisions', 'Api\GovernanceController::decisions');
+        $routes->get('decisions/(:num)', 'Api\GovernanceController::showDecision/$1');
+        $routes->get('audit-logs', 'Api\GovernanceController::auditLogs');
+
+        // Mutating endpoints (Protected by Bearer Token)
+        $routes->group('', ['filter' => 'mce_auth'], static function ($routes) {
+            $routes->post('bodies/(:num)/members', 'Api\GovernanceController::addBodyMember');
+            $routes->post('delegations', 'Api\GovernanceController::createDelegation');
+            $routes->post('delegations/(:num)/revoke', 'Api\GovernanceController::revokeDelegation/$1');
+            $routes->post('directions', 'Api\GovernanceController::createDirection');
+            $routes->post('directions/(:num)/acknowledge', 'Api\GovernanceController::acknowledgeDirection/$1');
+            $routes->post('decisions', 'Api\GovernanceController::createDecision');
+            $routes->post('decisions/(:num)/ratify', 'Api\GovernanceController::ratifyDecision/$1');
+        });
+    });
+
+    // AI Agent Registry & Workforce Lifecycle Management (Prompt 19)
+    $routes->group('workforce', static function ($routes) {
+        // Read-only / Query
+        $routes->get('metrics', 'Api\WorkforceController::metrics');
+        $routes->get('agents', 'Api\WorkforceController::index');
+        $routes->get('agents/(:num)', 'Api\WorkforceController::show/$1');
+        $routes->get('agents/(:num)/profile', 'Api\WorkforceController::getProfile/$1');
+        $routes->get('agents/(:num)/lifecycle', 'Api\WorkforceController::lifecycleHistory/$1');
+        $routes->get('agents/(:num)/assignments', 'Api\WorkforceController::assignments/$1');
+        $routes->get('agents/(:num)/responsibilities', 'Api\WorkforceController::responsibilities/$1');
+        $routes->get('skills', 'Api\WorkforceController::skillCatalogue');
+        $routes->get('agents/(:num)/skills', 'Api\WorkforceController::agentSkills/$1');
+        $routes->get('agents/(:num)/performance-history', 'Api\WorkforceController::performanceHistory/$1');
+        $routes->get('agents/(:num)/runtime-mappings', 'Api\WorkforceController::runtimeMappings/$1');
+
+        // Scheduling, Shifts & Coverage Query Routes
+        $routes->get('scheduling/policies', 'Api\SchedulingController::listPolicies');
+        $routes->get('scheduling/shifts', 'Api\SchedulingController::listShifts');
+        $routes->get('scheduling/rosters', 'Api\SchedulingController::listRosters');
+        $routes->get('scheduling/rosters/(:num)', 'Api\SchedulingController::showRoster/$1');
+        $routes->get('scheduling/coverage/requirements', 'Api\SchedulingController::listCoverageRequirements');
+        $routes->get('scheduling/coverage/status', 'Api\SchedulingController::evaluateCoverage');
+        $routes->get('scheduling/coverage/gaps', 'Api\SchedulingController::getCoverageGaps');
+        $routes->get('agents/(:num)/availability', 'Api\SchedulingController::getAvailability/$1');
+
+        // Replacement Query Routes
+        $routes->get('replacements', 'Api\ReplacementController::index');
+        $routes->get('replacements/candidates', 'Api\ReplacementController::findCandidates');
+        $routes->get('replacements/(:num)', 'Api\ReplacementController::show/$1');
+
+        // Task Management & Delegation Query Routes (Prompt 21)
+        $routes->get('tasks', 'Api\TaskOperationsController::index');
+        $routes->get('tasks/metrics', 'Api\TaskOperationsController::metrics');
+        $routes->get('tasks/delegations', 'Api\TaskOperationsController::listDelegations');
+        $routes->get('tasks/collaborations', 'Api\TaskOperationsController::listCollaborations');
+        $routes->get('tasks/collaborations/(:num)', 'Api\TaskOperationsController::showCollaboration/$1');
+        $routes->get('tasks/(:num)', 'Api\TaskOperationsController::show/$1');
+        $routes->get('tasks/(:num)/dependencies', 'Api\TaskOperationsController::listDependencies/$1');
+        $routes->get('tasks/(:num)/deliverables', 'Api\TaskOperationsController::listDeliverables/$1');
+        $routes->get('agents/(:num)/active-tasks', 'Api\TaskOperationsController::activeTasksForAgent/$1');
+
+        // Mutating endpoints (Protected by Bearer Token)
+        $routes->group('', ['filter' => 'mce_auth'], static function ($routes) {
+            $routes->post('agents', 'Api\WorkforceController::create');
+            $routes->put('agents/(:num)', 'Api\WorkforceController::update/$1');
+            $routes->put('agents/(:num)/profile', 'Api\WorkforceController::updateProfile/$1');
+            $routes->post('agents/(:num)/transition', 'Api\WorkforceController::transition/$1');
+            $routes->post('agents/(:num)/assignments', 'Api\WorkforceController::assign/$1');
+            $routes->post('assignments/(:num)/end', 'Api\WorkforceController::endAssignment/$1');
+            $routes->post('agents/(:num)/responsibilities', 'Api\WorkforceController::addResponsibility/$1');
+            $routes->post('skills', 'Api\WorkforceController::createSkill');
+            $routes->post('agents/(:num)/skills', 'Api\WorkforceController::assignSkill/$1');
+            $routes->post('skills/(:num)/verify', 'Api\WorkforceController::verifySkill/$1');
+            $routes->post('agents/(:num)/performance-history', 'Api\WorkforceController::recordPerformance/$1');
+            $routes->post('performance-history/(:num)/verify', 'Api\WorkforceController::verifyPerformanceEvidence/$1');
+            $routes->post('performance-history/(:num)/amend', 'Api\WorkforceController::amendPerformance/$1');
+            $routes->post('agents/(:num)/runtime-mappings', 'Api\WorkforceController::setRuntimeMapping/$1');
+
+            // Scheduling Mutations
+            $routes->post('scheduling/policies', 'Api\SchedulingController::createPolicy');
+            $routes->post('scheduling/shifts', 'Api\SchedulingController::createShift');
+            $routes->post('scheduling/rosters', 'Api\SchedulingController::createRoster');
+            $routes->post('scheduling/rosters/(:num)/publish', 'Api\SchedulingController::publishRoster/$1');
+            $routes->post('scheduling/duty-assignments', 'Api\SchedulingController::createDutyAssignment');
+            $routes->post('scheduling/duty-assignments/(:num)/complete', 'Api\SchedulingController::completeDutyAssignment/$1');
+            $routes->post('agents/(:num)/off-duty-requests', 'Api\SchedulingController::requestOffDuty/$1');
+
+            // Replacement Mutations
+            $routes->post('replacements', 'Api\ReplacementController::create');
+            $routes->post('replacements/(:num)/accept', 'Api\ReplacementController::accept/$1');
+            $routes->post('replacements/(:num)/approve', 'Api\ReplacementController::approve/$1');
+            $routes->post('replacements/(:num)/activate', 'Api\ReplacementController::activate/$1');
+
+            // Task Management Mutations (Prompt 21)
+            $routes->post('tasks', 'Api\TaskOperationsController::create');
+            $routes->post('tasks/(:num)/transition', 'Api\TaskOperationsController::transition/$1');
+            $routes->post('tasks/(:num)/delegations', 'Api\TaskOperationsController::createDelegation/$1');
+            $routes->post('delegations/(:num)/accept', 'Api\TaskOperationsController::acceptDelegation/$1');
+            $routes->post('tasks/(:num)/collaborations', 'Api\TaskOperationsController::createCollaboration/$1');
+            $routes->post('tasks/collaborations/(:num)/members', 'Api\TaskOperationsController::addCollaborationMember/$1');
+            $routes->post('tasks/(:num)/dependencies', 'Api\TaskOperationsController::addDependency/$1');
+            $routes->post('tasks/(:num)/deliverables', 'Api\TaskOperationsController::submitDeliverable/$1');
+            $routes->post('tasks/(:num)/reviews', 'Api\TaskOperationsController::submitReview/$1');
+            $routes->post('tasks/(:num)/blockers', 'Api\TaskOperationsController::reportBlocker/$1');
+            $routes->post('tasks/blockers/(:num)/resolve', 'Api\TaskOperationsController::resolveBlocker/$1');
+        });
+    });
+
+    // Wallbook Operational Handover Management
+    $routes->group('wallbook', static function ($routes) {
+        $routes->get('', 'Api\WallbookController::index');
+        $routes->get('handovers', 'Api\WallbookController::index');
+        $routes->get('handovers/(:num)', 'Api\WallbookController::show/$1');
+
+        $routes->group('', ['filter' => 'mce_auth'], static function ($routes) {
+            $routes->post('handovers', 'Api\WallbookController::create');
+            $routes->post('handovers/(:num)/items', 'Api\WallbookController::addItem/$1');
+            $routes->post('handovers/(:num)/submit', 'Api\WallbookController::submit/$1');
+            $routes->post('handovers/(:num)/acknowledge', 'Api\WallbookController::acknowledge/$1');
+            $routes->post('handovers/(:num)/clarify', 'Api\WallbookController::clarify/$1');
+            $routes->post('handovers/(:num)/accept', 'Api\WallbookController::accept/$1');
+            $routes->post('handovers/escalate-overdue', 'Api\WallbookController::escalateOverdue');
+        });
+    });
+
+    // Runtime Infrastructure & Hermes Orchestration (Prompt 22)
+    $routes->group('runtime', static function ($routes) {
+        $routes->get('health', 'Api\RuntimeController::health');
+        $routes->get('status', 'Api\RuntimeController::health');
+        $routes->get('environments', 'Api\RuntimeController::environments', ['filter' => ['mce_auth', 'mce_permission:runtime.view']]);
+        $routes->get('profiles', 'Api\RuntimeController::profiles', ['filter' => ['mce_auth', 'mce_permission:runtime.view']]);
+        $routes->get('tools', 'Api\RuntimeController::listTools', ['filter' => ['mce_auth', 'mce_permission:runtime.view']]);
+        $routes->get('executions', 'Api\RuntimeController::listExecutions', ['filter' => ['mce_auth', 'mce_permission:runtime.view']]);
+        $routes->get('executions/(:num)', 'Api\RuntimeController::getExecution/$1', ['filter' => ['mce_auth', 'mce_permission:runtime.view']]);
+        $routes->get('agents/(:num)', 'Api\RuntimeController::getAgentRuntime/$1', ['filter' => ['mce_auth', 'mce_permission:runtime.view']]);
+
+        $routes->group('', ['filter' => ['mce_auth', 'mce_permission:runtime.manage']], static function ($routes) {
+            $routes->post('agents/(:num)/provision', 'Api\RuntimeController::provisionAgent/$1');
+            $routes->post('agents/(:num)/suspend', 'Api\RuntimeController::suspendAgent/$1');
+            $routes->post('agents/(:num)/validate', 'Api\RuntimeController::validateAgent/$1');
+            $routes->post('executions', 'Api\RuntimeController::dispatchExecution');
+            $routes->post('executions/(:num)/cancel', 'Api\RuntimeController::cancelExecution/$1');
+            $routes->post('tools', 'Api\RuntimeController::createTool');
+            $routes->post('tools/invoke', 'Api\RuntimeController::invokeTool', ['filter' => 'mce_permission:runtime.tools.invoke']);
+        });
+    });
+
+    // 9Router Model Gateway Management (Prompt 22)
+    $routes->group('model-gateway', static function ($routes) {
+        $routes->get('status', 'Api\RuntimeController::gatewayStatus');
+        $routes->get('routes', 'Api\RuntimeController::gatewayRoutes');
+        $routes->get('usage', 'Api\RuntimeController::gatewayUsage');
+
+        $routes->group('', ['filter' => 'mce_auth'], static function ($routes) {
+            $routes->post('completions', 'Api\RuntimeController::gatewayComplete');
+        });
+    });
 
     // Agents Management
     $routes->get('agents', 'Api\AgentController::index');
@@ -32,4 +244,52 @@ $routes->group('api/v1', static function ($routes) {
     // 3D Virtual Office Integration
     $routes->get('office/layout', 'Api\OfficeController::layout');
     $routes->get('office/feed', 'Api\OfficeController::feed');
+
+    // Virtual Headquarters (VHQ) 3D Spatial Operations (Prompt 23)
+    $routes->group('vhq', static function ($routes) {
+        $routes->get('campus', 'Api\VhqController::campus');
+        $routes->get('buildings/(:num)', 'Api\VhqController::building/$1');
+        $routes->get('rooms', 'Api\VhqController::rooms');
+        $routes->get('workstations', 'Api\VhqController::workstations');
+        $routes->get('presence', 'Api\VhqController::presence');
+        $routes->get('agents/(:num)/presence', 'Api\VhqController::agentPresence/$1');
+        $routes->get('bookmarks', 'Api\VhqController::bookmarks');
+
+        $routes->group('', ['filter' => 'mce_auth'], static function ($routes) {
+            $routes->post('workstations/(:num)/assign', 'Api\VhqController::assignWorkstation/$1');
+        });
+    });
+
+    // Agent Welfare, Facilities & Welfare Tickets (Prompt 24)
+    $routes->group('welfare', static function ($routes) {
+        $routes->get('overview', 'Api\WelfareController::overview');
+        $routes->get('policies', 'Api\WelfareController::listPolicies');
+        $routes->get('policies/active', 'Api\WelfareController::activePolicy');
+        $routes->get('periods', 'Api\WelfareController::listPeriods');
+        $routes->get('periods/(:num)', 'Api\WelfareController::getPeriod/$1');
+        $routes->get('task-bonuses', 'Api\WelfareController::listTaskBonuses');
+        $routes->get('recognitions', 'Api\WelfareController::listRecognitions');
+        $routes->get('ledger', 'Api\WelfareController::listTransactions');
+        $routes->get('agents/(:num)/balance', 'Api\WelfareController::getAgentBalance/$1');
+        $routes->get('facilities', 'Api\WelfareController::listFacilities');
+        $routes->get('facility-logs', 'Api\WelfareController::listFacilityLogs');
+
+        $routes->group('', ['filter' => 'mce_auth'], static function ($routes) {
+            $routes->post('policies', 'Api\WelfareController::createPolicy');
+            $routes->post('policies/(:num)/approve', 'Api\WelfareController::approvePolicy/$1');
+            $routes->post('periods', 'Api\WelfareController::createPeriod');
+            $routes->post('periods/(:num)/calculate', 'Api\WelfareController::calculatePeriod/$1');
+            $routes->post('periods/(:num)/approve', 'Api\WelfareController::approvePeriod/$1');
+            $routes->post('periods/(:num)/distribute', 'Api\WelfareController::distributePeriod/$1');
+            $routes->post('tasks/(:num)/evaluate-bonus', 'Api\WelfareController::evaluateTaskBonus/$1');
+            $routes->post('task-bonuses/(:num)/approve', 'Api\WelfareController::approveTaskBonus/$1');
+            $routes->post('recognitions', 'Api\WelfareController::nominateRecognition');
+            $routes->post('recognitions/(:num)/approve', 'Api\WelfareController::approveRecognition/$1');
+            $routes->post('agents/(:num)/reconcile', 'Api\WelfareController::reconcileAgentBalance/$1');
+            $routes->post('adjustments', 'Api\WelfareController::postAdjustment');
+            $routes->post('transactions/(:num)/reverse', 'Api\WelfareController::reverseTransaction/$1');
+            $routes->post('facilities/(:num)/check-in', 'Api\WelfareController::checkInFacility/$1');
+            $routes->post('facility-sessions/(:num)/check-out', 'Api\WelfareController::checkOutFacility/$1');
+        });
+    });
 });
