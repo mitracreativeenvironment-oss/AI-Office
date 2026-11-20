@@ -369,6 +369,11 @@ class WorkforceSchedulingSeeder extends Seeder
                         'created_at'          => $now,
                         'updated_at'          => $now,
                     ]);
+                } else {
+                    $this->db->table('workforce_duty_assignments')->where('id', $existingAssignment['id'])->update([
+                        'duty_type' => $dutyType,
+                        'shift_id'  => $shiftId,
+                    ]);
                 }
             }
         }

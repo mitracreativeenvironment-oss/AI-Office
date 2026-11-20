@@ -436,4 +436,54 @@ $routes->group('api/v1', static function ($routes) {
             $routes->put('(:num)/budget', 'Api\ProjectController::updateBudget/$1');
         });
     });
+
+    // Resource & Capacity Planning, Portfolio Prioritization & Operational Allocation (Prompt 28)
+    $routes->group('resource-planning', static function ($routes) {
+        $routes->get('overview', 'Api\ResourcePlanningController::getOrganizationOverview');
+        $routes->get('divisional-comparison', 'Api\ResourcePlanningController::getDivisionalComparison');
+        $routes->get('resources', 'Api\ResourcePlanningController::getResources');
+        $routes->get('resources/(:num)', 'Api\ResourcePlanningController::getResource/$1');
+        $routes->get('capacity/agents', 'Api\ResourcePlanningController::getAllAgentsCapacity');
+        $routes->get('capacity/agents/(:num)', 'Api\ResourcePlanningController::getAgentCapacity/$1');
+        $routes->get('capacity/agents/(:num)/timeline', 'Api\ResourcePlanningController::getAgentTimeline/$1');
+        $routes->get('workload/heatmap', 'Api\ResourcePlanningController::getWorkloadHeatmap');
+        $routes->get('workload/summary', 'Api\ResourcePlanningController::getWorkloadSummary');
+        $routes->get('skills/matrix', 'Api\ResourcePlanningController::getSkillCoverageMatrix');
+        $routes->get('skills/bottlenecks', 'Api\ResourcePlanningController::getSkillBottlenecks');
+        $routes->get('skills/spof', 'Api\ResourcePlanningController::getSingleAgentDependencies');
+        $routes->get('reservations', 'Api\ResourcePlanningController::getReservations');
+        $routes->get('reservations/(:num)', 'Api\ResourcePlanningController::getReservation/$1');
+        $routes->get('requests', 'Api\ResourcePlanningController::getRequests');
+        $routes->get('requests/(:num)', 'Api\ResourcePlanningController::getRequest/$1');
+        $routes->get('allocations', 'Api\ResourcePlanningController::getAllocations');
+        $routes->get('conflicts', 'Api\ResourcePlanningController::getConflicts');
+        $routes->get('conflicts/(:num)', 'Api\ResourcePlanningController::getConflict/$1');
+        $routes->get('priorities', 'Api\ResourcePlanningController::getPortfolioPriorities');
+        $routes->get('priorities/project/(:num)', 'Api\ResourcePlanningController::getProjectPriority/$1');
+        $routes->get('forecasts', 'Api\ResourcePlanningController::getForecastSnapshots');
+        $routes->get('gaps', 'Api\ResourcePlanningController::getGapAnalyses');
+
+        $routes->group('', ['filter' => 'mce_auth'], static function ($routes) {
+            $routes->post('resources', 'Api\ResourcePlanningController::createResource');
+            $routes->put('resources/(:num)', 'Api\ResourcePlanningController::updateResource/$1');
+            $routes->delete('resources/(:num)', 'Api\ResourcePlanningController::deleteResource/$1');
+            $routes->post('reservations', 'Api\ResourcePlanningController::createReservation');
+            $routes->put('reservations/(:num)', 'Api\ResourcePlanningController::updateReservation/$1');
+            $routes->post('reservations/(:num)/deactivate', 'Api\ResourcePlanningController::deactivateReservation/$1');
+            $routes->post('requests', 'Api\ResourcePlanningController::createRequest');
+            $routes->post('requests/(:num)/submit', 'Api\ResourcePlanningController::submitRequest/$1');
+            $routes->post('requests/(:num)/assess-capacity', 'Api\ResourcePlanningController::assessRequestCapacity/$1');
+            $routes->post('requests/(:num)/approve', 'Api\ResourcePlanningController::approveRequest/$1');
+            $routes->post('requests/(:num)/reject', 'Api\ResourcePlanningController::rejectRequest/$1');
+            $routes->post('requests/(:num)/allocate', 'Api\ResourcePlanningController::allocateRequest/$1');
+            $routes->post('conflicts/detect', 'Api\ResourcePlanningController::detectConflicts');
+            $routes->post('conflicts/(:num)/resolve', 'Api\ResourcePlanningController::resolveConflict/$1');
+            $routes->post('conflicts/(:num)/dismiss', 'Api\ResourcePlanningController::dismissConflict/$1');
+            $routes->post('priorities/evaluate', 'Api\ResourcePlanningController::evaluateProjectPriority');
+            $routes->post('priorities/override', 'Api\ResourcePlanningController::overridePriority');
+            $routes->post('forecasts/generate', 'Api\ResourcePlanningController::generateForecastSnapshot');
+            $routes->post('gaps', 'Api\ResourcePlanningController::createGapAnalysis');
+            $routes->post('gaps/(:num)/resolve', 'Api\ResourcePlanningController::resolveGapAnalysis/$1');
+        });
+    });
 });

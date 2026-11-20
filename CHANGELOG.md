@@ -6,6 +6,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.13.0] - 2026-11-21 — Resource & Capacity Planning, Portfolio Prioritization & Operational Allocation Milestone (Prompt 28)
+
+### Added
+- **Database Schema Batch 13 (`CreateResourceAndCapacityPlanningSchema.php`)**:
+  - Implemented 9 relational tables: `resource_registry`, `resource_capacity_reservations`, `resource_requests`, `resource_allocations_master`, `resource_conflicts`, `portfolio_priorities`, `capacity_forecast_snapshots`, `capacity_gap_analyses`, `resource_audit_events`.
+  - Configured short foreign key constraints (`fk_rr_*`, `fk_rcr_*`, `fk_rq_*`, `fk_ram_*`, `fk_rc_*`, `fk_pp_*`, `fk_cfs_*`, `fk_cga_*`) respecting MySQL/MariaDB 64-char identifier limits.
+- **Database Seeder (`ResourcePlanningSeeder.php`)**:
+  - Seeded 6 reusable operational assets (9Router Model Pool, Hermes Node Cluster, Staging Sandbox, Figma Enterprise Seats, Neural Audio Lab, VHQ Boardroom).
+  - Seeded Continuous Executive Board ring-fenced capacity reservations protecting internal platform R&D, bizdev solutioning, governance, and agent welfare cooldowns.
+  - Seeded formal resource requests across DoA Level A and Level B categories.
+  - Seeded master schedule allocations binding requests, workforce agents, and operational assets.
+  - Seeded realistic operational conflict simulations (overallocation warnings, rest-cycle clashes, and skill proficiency deficits).
+  - Seeded strategic multi-criteria portfolio priorities with calculated ranks and Tier 1 Critical badges.
+  - Seeded forward-looking demand vs supply capacity forecast snapshots with explicit `is_forecast_data = 1` tagging.
+  - Seeded competency gap analyses with concrete upskilling action plans.
+- **Backend Domain Services**:
+  - `ResourceRegistryService.php`: Operational assets catalog, capacities, costs, and specifications.
+  - `AgentCapacityService.php`: Mathematical capacity engine enforcing formula Available = Scheduled - Allocated - Reserved - Unavailable; 5/2 shift compliance, and utilization tier classifications (`underutilized`, `balanced`, `high_utilization`, `overallocated`, `unavailable`).
+  - `OrganizationalCapacityService.php`: Dynamic capacity roll-up across organizational units and divisions.
+  - `SkillCoverageService.php`: Competency matrix, verified vs pending proficiencies, Single Point of Failure (SPOF) detection, and skill bottleneck identification.
+  - `WorkloadManagementService.php`: Workload analysis, 4-week agent horizon heatmap, and enterprise workload health distribution.
+  - `ResourceRequestService.php`: 9-stage request lifecycle workflow with automated capacity checking, DoA Level A (>5M) vs Level B (<=5M) routing, and master allocation scheduling.
+  - `CapacityReservationService.php`: Autonomous Continuous Executive Board capacity ring-fencing.
+  - `ResourceConflictService.php`: Real-time collision detector for overallocations, 5/2 rest day violations, skill deficiencies, and maintenance outages.
+  - `PortfolioPrioritizationService.php`: Mathematical composite scoring model (0.25S + 0.25C + 0.20V + 0.15U + 0.15F - 0.10R), rank recalculation, and human-in-the-loop override auditing.
+  - `CapacityForecastService.php`: Forward-looking demand vs supply projections (tagged `is_forecast_data = 1`) and competency deficit resolution plans.
+- **REST API Controller & Routing**:
+  - `ResourcePlanningController.php`: 36 RESTful endpoints under `/api/v1/resource-planning/*` with standardized envelopes and auth filters.
+- **Frontend Integration**:
+  - `resourcePlanning.ts`: Comprehensive TypeScript interfaces and types.
+  - `resourcePlanningService.ts`: Centralized client service for all 36 endpoints.
+  - `ResourcePlanningView.tsx`: 9-tab enterprise control center (Overview, Workload Heatmap, Skill Coverage & SPOF, Resource Inventory, Internal Ops Ring-Fence, Requests & Allocations, Conflict Center, Portfolio Prioritization, Forecasting & Gap Analysis).
+  - Integrated into `NavigationHeader.tsx`, `App.tsx`, and URL hash routing (`#resources`).
+- **Testing & Quality Assurance**:
+  - `ResourcePlanningTest.php`: 13 PHPUnit tests, 120 assertions passing 100% (124 total backend tests, 951 assertions passing 100% across entire suite).
+  - `scripts/test_backend.php`: Section 16 added with 36 integration endpoints (277/277 REST endpoints passing 100%).
+  - `npm --prefix frontend run build`: Clean production compilation with Vite (0 errors).
+- **Documentation**:
+  - `docs/architecture/RESOURCE-AND-CAPACITY-PLANNING-ARCHITECTURE.md`
+  - `docs/operations/CAPACITY-PLANNING-RUNBOOK.md`
+  - `docs/implementation/RESOURCE-PLANNING-READINESS.md`
+  - `docs/implementation/IMPLEMENTATION-STATUS.md`
+
 ## [0.12.0] - 2026-11-21 — Project Management, Client Engagement, Project Lifecycle & Delivery Operations Milestone (Prompt 27)
 
 ### Added

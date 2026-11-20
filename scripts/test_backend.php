@@ -1,5 +1,7 @@
 <?php
 
+date_default_timezone_set('Asia/Jakarta');
+
 // MCE REST API End-to-End Test Suite (Fase 1, 2, Prompt 17 Auth/RBAC & Prompt 18 Org/Governance)
 // Verifies HTTP endpoints, JSON structure, authentication, RBAC, organization hierarchy, and corporate governance
 
@@ -66,13 +68,16 @@ echo "========================================================================\n
 $pass = 0;
 $total = 0;
 
-function reportTest(string $method, string $path, int $expected, int $actual, string $label, bool $success, &$pass, &$total) {
+function reportTest(string $method, string $path, int $expected, int $actual, string $label, bool $success, &$pass, &$total, $details = null) {
     $total++;
     if ($success) {
         $pass++;
         echo sprintf(" [PASS] %-6s %-38s -> %s (HTTP %d)\n", $method, $path, $label, $actual);
     } else {
         echo sprintf("❌ [FAIL] %-6s %-38s -> Expected %d, got %d (%s)\n", $method, $path, $expected, $actual, $label);
+        if ($details !== null) {
+            echo "   DETAILS: " . json_encode($details, JSON_UNESCAPED_SLASHES) . "\n";
+        }
     }
 }
 
@@ -523,48 +528,51 @@ foreach ($taskRead as [$method, $path, $exp, $lbl]) {
 }
 
 // Mutating Task Workflow Test: Create -> Assign -> Lifecycle -> Deliverable -> Review -> Blocker
+// Under 5/2 staggered policy, select an active engineer on working duty today (Agent 5 Dev AI Wed-Sun, Agent 6 Mon-Fri)
+$dayOfWeekIso = (int)date('N');
+$workerAgentId = in_array($dayOfWeekIso, [6, 7]) ? 5 : 6;
 $newTaskCode = 'TSK-INT-' . rand(1000, 9999);
 [$code, $json] = requestHttp($baseUrl . '/workforce/tasks', 'POST', [
     'task_code'            => $newTaskCode,
     'title'                => 'Integration Test E2E Task Workflow',
     'objective'            => 'Validate task execution, delegation, deliverables and review lifecycle.',
     'unit_id'              => 2,
-    'accountable_agent_id' => 6,
+    'accountable_agent_id' => $workerAgentId,
     'category'             => 'development',
     'priority'             => 'high',
 ], $authToken);
 $newTaskId = $json['data']['id'] ?? null;
 $ok = ($code === 201) && (($json['data']['status'] ?? '') === 'draft');
-reportTest('POST', '/workforce/tasks', 201, $code, 'Create New Workforce Task in Draft State', $ok, $pass, $total);
+reportTest('POST', '/workforce/tasks', 201, $code, 'Create New Workforce Task in Draft State', $ok, $pass, $total, $json);
 
 if ($newTaskId) {
     // 1. Lifecycle transitions: draft -> ready -> in_progress
     requestHttp($baseUrl . "/workforce/tasks/{$newTaskId}/transition", 'POST', ['target_status' => 'ready'], $authToken);
     [$code, $json] = requestHttp($baseUrl . "/workforce/tasks/{$newTaskId}/transition", 'POST', ['target_status' => 'in_progress'], $authToken);
     $ok = ($code === 200) && (($json['data']['status'] ?? '') === 'in_progress');
-    reportTest('POST', "/workforce/tasks/{$newTaskId}/transition", 200, $code, '17-State Lifecycle Transition to in_progress', $ok, $pass, $total);
+    reportTest('POST', "/workforce/tasks/{$newTaskId}/transition", 200, $code, '17-State Lifecycle Transition to in_progress', $ok, $pass, $total, $json);
 
-    // 2. Formal Delegation: Dev AI (6) delegates architectural review to Tech Head (2)
+    // 2. Formal Delegation: Worker agent delegates architectural review to Tech Head (2)
     [$code, $json] = requestHttp($baseUrl . "/workforce/tasks/{$newTaskId}/delegations", 'POST', [
-        'delegating_agent_id' => 6,
+        'delegating_agent_id' => $workerAgentId,
         'delegated_agent_id'  => 2,
         'delegated_scope'     => 'Implement test validation suite.',
         'authority_limit'     => 'routine',
     ], $authToken);
     $newDelegId = $json['data']['id'] ?? null;
     $ok = ($code === 201) && (($json['data']['status'] ?? '') === 'proposed');
-    reportTest('POST', "/workforce/tasks/{$newTaskId}/delegations", 201, $code, 'Create Formal Task Delegation', $ok, $pass, $total);
+    reportTest('POST', "/workforce/tasks/{$newTaskId}/delegations", 201, $code, 'Create Formal Task Delegation', $ok, $pass, $total, $json);
 
     if ($newDelegId) {
         [$code, $json] = requestHttp($baseUrl . "/workforce/delegations/{$newDelegId}/accept", 'POST', [], $authToken);
         $ok = ($code === 200) && (($json['data']['status'] ?? '') === 'accepted');
-        reportTest('POST', "/workforce/delegations/{$newDelegId}/accept", 200, $code, 'Accept Task Delegation', $ok, $pass, $total);
+        reportTest('POST', "/workforce/delegations/{$newDelegId}/accept", 200, $code, 'Accept Task Delegation', $ok, $pass, $total, $json);
     }
 
-    // 3. Submit Deliverable: Dev AI (6) submits artifact
+    // 3. Submit Deliverable: Worker agent submits artifact
     [$code, $json] = requestHttp($baseUrl . "/workforce/tasks/{$newTaskId}/deliverables", 'POST', [
         'title'               => 'E2E Test Artifact Suite',
-        'submitting_agent_id' => 6,
+        'submitting_agent_id' => $workerAgentId,
         'deliverable_type'    => 'source_code',
         'artifact_uri'        => 'file://tests/unit/TaskOperationsTest.php',
         'content_summary'     => 'Complete integration test suite with 100% assertions pass rate.',
@@ -682,11 +690,11 @@ reportTest('POST', '/runtime/tools/invoke', 200, $code, 'Authorize & Invoke Cont
 $dispatchTaskId = $newTaskId ?? 2;
 [$code, $json] = requestHttp($baseUrl . '/runtime/executions', 'POST', [
     'task_id'  => $dispatchTaskId,
-    'agent_id' => 6,
+    'agent_id' => $workerAgentId,
     'nonce'    => 'test_e2e_' . rand(1000, 9999),
 ], $authToken);
 $ok = ($code === 201) && (in_array($json['data']['status'] ?? '', ['completed', 'running', 'dispatched'], true));
-reportTest('POST', '/runtime/executions', 201, $code, 'Dispatch Authorized Task Execution to Hermes Runtime', $ok, $pass, $total);
+reportTest('POST', '/runtime/executions', 201, $code, 'Dispatch Authorized Task Execution to Hermes Runtime', $ok, $pass, $total, $json);
 
 // -----------------------------------------------------------------------------
 // 11. Virtual Headquarters (VHQ) 3D Spatial Operations (Prompt 23)
@@ -1039,7 +1047,7 @@ reportTest('GET', '/knowledge/contributions', 200, $code, 'List Agent Knowledge 
 ], $authToken);
 $contribId = $json['data']['id'] ?? null;
 $ok = ($code === 201) && (($json['data']['status'] ?? '') === 'submitted');
-reportTest('POST', '/knowledge/contributions', 201, $code, 'Submit AI Agent Knowledge Contribution', $ok, $pass, $total);
+reportTest('POST', '/knowledge/contributions', 201, $code, 'Submit AI Agent Knowledge Contribution', $ok, $pass, $total, $json);
 
 // 14. Review Contribution & Award Performance Recognition (Owner approves Agent 3 contribution)
 if ($contribId) {
@@ -1147,7 +1155,7 @@ reportTest('POST', "/knowledge/wallbook/checklists/{$chkId}", 200, $code, 'Verif
     'proposed_domain' => 'operational',
 ], $authToken);
 $ok = ($code === 201) && !empty($json['data']['contribution_code']);
-reportTest('POST', '/knowledge/wallbook/1/items/1/promote', 201, $code, 'Promote Shift Handover Insights to Knowledge Contribution', $ok, $pass, $total);
+reportTest('POST', '/knowledge/wallbook/1/items/1/promote', 201, $code, 'Promote Shift Handover Insights to Knowledge Contribution', $ok, $pass, $total, $json);
 
 // 26. Multi-Domain Search
 [$code, $json] = requestHttp($baseUrl . '/knowledge/search?q=governance', 'GET', null, $authToken);
@@ -1841,7 +1849,268 @@ $ok = ($code === 200) && isset($json['data']['progress_percent']);
 reportTest('POST', "/projects/{$testPrjId}/recalculate-progress", 200, $code, 'Trigger Mathematical Progress Recalculation from Tasks & Milestones', $ok, $pass, $total);
 
 // -----------------------------------------------------------------------------
-// 16. Token Revocation
+// 16. Resource & Capacity Planning, Portfolio Prioritization & Operational Allocation (Prompt 28)
+// -----------------------------------------------------------------------------
+
+// 1. Organizational Overview
+[$code, $json] = requestHttp($baseUrl . '/resource-planning/overview', 'GET');
+$ok = ($code === 200) && isset($json['data']['overview']['headcount']) && isset($json['data']['divisional_breakdown']);
+reportTest('GET', '/resource-planning/overview', 200, $code, 'Organization Capacity Overview & Roll-up Metrics', $ok, $pass, $total);
+
+// 2. Divisional Comparison
+[$code, $json] = requestHttp($baseUrl . '/resource-planning/divisional-comparison', 'GET');
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/resource-planning/divisional-comparison', 200, $code, 'Divisional Capacity Comparison & Utilization Roll-up', $ok, $pass, $total);
+
+// 3. Operational Resource Inventory
+[$code, $json] = requestHttp($baseUrl . '/resource-planning/resources', 'GET');
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/resource-planning/resources', 200, $code, 'List Operational Asset, Tool & Model Gateway Inventory', $ok, $pass, $total);
+
+// 4. Get Single Resource
+$firstResId = $json['data'][0]['id'] ?? 1;
+[$code, $json] = requestHttp($baseUrl . "/resource-planning/resources/{$firstResId}", 'GET');
+$ok = ($code === 200) && (($json['data']['id'] ?? 0) == $firstResId);
+reportTest('GET', "/resource-planning/resources/{$firstResId}", 200, $code, 'Retrieve Operational Resource Specifications & Capacities', $ok, $pass, $total);
+
+// 5. Register Operational Resource (Auth)
+[$code, $json] = requestHttp($baseUrl . '/resource-planning/resources', 'POST', [
+    'resource_code'   => 'RES-E2E-' . strtoupper(substr(uniqid(), -4)),
+    'name'            => 'E2E Dedicated GPU Rendering Farm',
+    'category'        => 'compute_infrastructure',
+    'unit_of_measure' => 'hours',
+    'total_capacity'  => 160.00,
+    'unit_cost_idr'   => 85000.00,
+], $authToken);
+$testResId = $json['data']['id'] ?? null;
+$ok = ($code === 201) && !empty($testResId);
+reportTest('POST', '/resource-planning/resources', 201, $code, 'Register Operational Tool or Infrastructure Asset', $ok, $pass, $total);
+
+// 6. Update Resource Capacity (Auth)
+if ($testResId) {
+    [$code, $json] = requestHttp($baseUrl . "/resource-planning/resources/{$testResId}", 'PUT', [
+        'allocated_capacity' => 40.00,
+        'description'        => 'Updated via E2E test suite',
+    ], $authToken);
+    $ok = ($code === 200) && ((float)($json['data']['allocated_capacity'] ?? 0) == 40.00);
+    reportTest('PUT', "/resource-planning/resources/{$testResId}", 200, $code, 'Update Operational Resource Allocation & Utilization', $ok, $pass, $total);
+}
+
+// 7. List Agents Capacity
+[$code, $json] = requestHttp($baseUrl . '/resource-planning/capacity/agents', 'GET');
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/resource-planning/capacity/agents', 200, $code, 'List AI Agent Capacities, 5/2 Shifts & Net Availability', $ok, $pass, $total);
+
+// 8. Single Agent Capacity
+$firstAgentId = $json['data'][0]['agent_id'] ?? 1;
+[$code, $json] = requestHttp($baseUrl . "/resource-planning/capacity/agents/{$firstAgentId}", 'GET');
+$ok = ($code === 200) && isset($json['data']['scheduled_capacity_hours']) && isset($json['data']['utilization_classification']);
+reportTest('GET', "/resource-planning/capacity/agents/{$firstAgentId}", 200, $code, 'Verify Exact Agent Capacity Formula (Scheduled - Alloc - Reserved)', $ok, $pass, $total);
+
+// 9. Agent Timeline Horizon
+[$code, $json] = requestHttp($baseUrl . "/resource-planning/capacity/agents/{$firstAgentId}/timeline?weeks=4", 'GET');
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) === 4;
+reportTest('GET', "/resource-planning/capacity/agents/{$firstAgentId}/timeline", 200, $code, 'Retrieve 4-Week Rolling Agent Capacity Forecast Horizon', $ok, $pass, $total);
+
+// 10. Workload Heatmap
+[$code, $json] = requestHttp($baseUrl . '/resource-planning/workload/heatmap?weeks=4', 'GET');
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/resource-planning/workload/heatmap', 200, $code, 'Retrieve Multi-Agent Multi-Week Workload Heatmap Matrix', $ok, $pass, $total);
+
+// 11. Workload Summary
+[$code, $json] = requestHttp($baseUrl . '/resource-planning/workload/summary', 'GET');
+$ok = ($code === 200) && isset($json['data']['counts_by_tier']) && isset($json['data']['overall_utilization_pct']);
+reportTest('GET', '/resource-planning/workload/summary', 200, $code, 'Audit Enterprise Workload Health & Utilization Tiers', $ok, $pass, $total);
+
+// 12. Skill Coverage Matrix
+[$code, $json] = requestHttp($baseUrl . '/resource-planning/skills/matrix', 'GET');
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/resource-planning/skills/matrix', 200, $code, 'Matrix of Verified Competencies & Proficiency Distributions', $ok, $pass, $total);
+
+// 13. Skill Bottlenecks
+[$code, $json] = requestHttp($baseUrl . '/resource-planning/skills/bottlenecks', 'GET');
+$ok = ($code === 200) && is_array($json['data']);
+reportTest('GET', '/resource-planning/skills/bottlenecks', 200, $code, 'Identify Critical Skill Bottlenecks & Deficit Gaps', $ok, $pass, $total);
+
+// 14. Single Point of Failure (SPOF)
+[$code, $json] = requestHttp($baseUrl . '/resource-planning/skills/spof', 'GET');
+$ok = ($code === 200) && is_array($json['data']);
+reportTest('GET', '/resource-planning/skills/spof', 200, $code, 'Detect Single Point of Failure (SPOF) Single-Agent Competencies', $ok, $pass, $total);
+
+// 15. List Capacity Reservations
+[$code, $json] = requestHttp($baseUrl . '/resource-planning/reservations', 'GET');
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/resource-planning/reservations', 200, $code, 'List Ring-Fenced Internal Operations Capacity Reservations', $ok, $pass, $total);
+
+// 16. Create Capacity Reservation (Auth)
+[$code, $json] = requestHttp($baseUrl . '/resource-planning/reservations', 'POST', [
+    'reservation_code'        => 'RSV-E2E-' . strtoupper(substr(uniqid(), -4)),
+    'title'                   => 'Autonomous BizDev Pipeline Engineering',
+    'reservation_type'        => 'bizdev_growth',
+    'reserved_percentage'     => 15,
+    'reserved_hours_per_week' => 6.00,
+    'justification'           => 'Executive Board ring-fenced capacity for client solutioning.',
+], $authToken);
+$testRsvId = $json['data']['id'] ?? null;
+$ok = ($code === 201) && !empty($testRsvId);
+reportTest('POST', '/resource-planning/reservations', 201, $code, 'Ring-Fence Internal Capacity under Continuous Executive Board Authority', $ok, $pass, $total);
+
+// 17. Update Reservation (Auth)
+if ($testRsvId) {
+    [$code, $json] = requestHttp($baseUrl . "/resource-planning/reservations/{$testRsvId}", 'PUT', [
+        'reserved_percentage' => 20,
+    ], $authToken);
+    $ok = ($code === 200) && ((int)($json['data']['reserved_percentage'] ?? 0) === 20);
+    reportTest('PUT', "/resource-planning/reservations/{$testRsvId}", 200, $code, 'Update Capacity Reservation Percentage & Hours', $ok, $pass, $total);
+}
+
+// 18. List Resource Requests
+[$code, $json] = requestHttp($baseUrl . '/resource-planning/requests', 'GET');
+$ok = ($code === 200) && is_array($json['data']);
+reportTest('GET', '/resource-planning/requests', 200, $code, 'List Resource Acquisition Requests & Lifecycle States', $ok, $pass, $total);
+
+// 19. Create Resource Request (Auth, DoA Level B)
+[$code, $json] = requestHttp($baseUrl . '/resource-planning/requests', 'POST', [
+    'request_code'       => 'REQ-E2E-' . strtoupper(substr(uniqid(), -4)),
+    'title'              => 'E2E Full-Stack Verification Support Engineer',
+    'resource_category'  => 'workforce_agent',
+    'hours_per_week'     => 12.00,
+    'estimated_cost_idr' => 2400000.00,
+    'purpose'            => 'Automated test suite execution and verification.',
+], $authToken);
+$testReqId = $json['data']['id'] ?? null;
+$ok = ($code === 201) && !empty($testReqId) && (($json['data']['approval_authority_level'] ?? '') === 'B');
+reportTest('POST', '/resource-planning/requests', 201, $code, 'Create Resource Request with Automatic DoA Level Assignment', $ok, $pass, $total);
+
+// 20. Submit Resource Request
+if ($testReqId) {
+    [$code, $json] = requestHttp($baseUrl . "/resource-planning/requests/{$testReqId}/submit", 'POST', null, $authToken);
+    $ok = ($code === 200) && (($json['data']['lifecycle_status'] ?? '') === 'submitted');
+    reportTest('POST', "/resource-planning/requests/{$testReqId}/submit", 200, $code, 'Submit Resource Request into Capacity Assessment Queue', $ok, $pass, $total);
+
+    // 21. Assess Capacity
+    [$code, $json] = requestHttp($baseUrl . "/resource-planning/requests/{$testReqId}/assess-capacity", 'POST', [
+        'notes' => 'Capacity verified available across technical pool.',
+    ], $authToken);
+    $ok = ($code === 200) && (($json['data']['lifecycle_status'] ?? '') === 'capacity_assessed');
+    reportTest('POST', "/resource-planning/requests/{$testReqId}/assess-capacity", 200, $code, 'Execute Automated Capacity Assessment & Availability Check', $ok, $pass, $total);
+
+    // 22. Approve Request
+    [$code, $json] = requestHttp($baseUrl . "/resource-planning/requests/{$testReqId}/approve", 'POST', null, $authToken);
+    $ok = ($code === 200) && (($json['data']['lifecycle_status'] ?? '') === 'approved');
+    reportTest('POST', "/resource-planning/requests/{$testReqId}/approve", 200, $code, 'Approve Resource Request under Delegated Authority', $ok, $pass, $total);
+
+    // 23. Allocate Request
+    [$code, $json] = requestHttp($baseUrl . "/resource-planning/requests/{$testReqId}/allocate", 'POST', [
+        'allocated_hours_per_week' => 12.00,
+        'allocated_percentage'     => 30,
+    ], $authToken);
+    $ok = ($code === 200) && (($json['data']['lifecycle_status'] ?? '') === 'allocated');
+    reportTest('POST', "/resource-planning/requests/{$testReqId}/allocate", 200, $code, 'Confirm and Schedule Resource Allocation Master Binding', $ok, $pass, $total);
+}
+
+// 24. List Master Allocations
+[$code, $json] = requestHttp($baseUrl . '/resource-planning/allocations', 'GET');
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/resource-planning/allocations', 200, $code, 'List Master Operational Schedule Allocations', $ok, $pass, $total);
+
+// 25. List Resource Conflicts
+[$code, $json] = requestHttp($baseUrl . '/resource-planning/conflicts', 'GET');
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/resource-planning/conflicts', 200, $code, 'List Operational, Shift & Concurrency Conflicts', $ok, $pass, $total);
+
+// 26. Detect Conflicts (Auth)
+[$code, $json] = requestHttp($baseUrl . '/resource-planning/conflicts/detect', 'POST', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']);
+reportTest('POST', '/resource-planning/conflicts/detect', 200, $code, 'Trigger Automated Operational Conflict Detection Engine', $ok, $pass, $total);
+
+// 27. Resolve Conflict (Auth)
+$firstCnfId = $json['data'][0]['id'] ?? 1;
+[$code, $json] = requestHttp($baseUrl . "/resource-planning/conflicts/{$firstCnfId}/resolve", 'POST', [
+    'notes' => 'Mitigated via E2E automated integration check.',
+], $authToken);
+$ok = ($code === 200) && (($json['data']['resolution_status'] ?? '') === 'resolved');
+reportTest('POST', "/resource-planning/conflicts/{$firstCnfId}/resolve", 200, $code, 'Resolve Resource Conflict with Operational Audit Record', $ok, $pass, $total);
+
+// 28. List Portfolio Priorities
+[$code, $json] = requestHttp($baseUrl . '/resource-planning/priorities', 'GET');
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/resource-planning/priorities', 200, $code, 'Retrieve Strategic Portfolio Multi-Criteria Priority Rankings', $ok, $pass, $total);
+
+// 29. Evaluate Project Priority (Auth)
+$targetPrjId = $json['data'][0]['project_id'] ?? 1;
+[$code, $json] = requestHttp($baseUrl . '/resource-planning/priorities/evaluate', 'POST', [
+    'project_id'                => $targetPrjId,
+    'strategic_alignment_score' => 92.00,
+    'customer_commitment_score' => 96.00,
+    'business_value_score'      => 88.00,
+    'urgency_score'             => 85.00,
+    'feasibility_score'         => 90.00,
+    'risk_penalty_score'        => 15.00,
+], $authToken);
+$ok = ($code === 200) && ((float)($json['data']['composite_priority_score'] ?? 0) > 85.00);
+reportTest('POST', '/resource-planning/priorities/evaluate', 200, $code, 'Execute Mathematical Multi-Criteria Weighted Priority Scoring', $ok, $pass, $total);
+
+// 30. Override Portfolio Priority (Auth)
+[$code, $json] = requestHttp($baseUrl . '/resource-planning/priorities/override', 'POST', [
+    'project_id'    => $targetPrjId,
+    'new_rank'      => 1,
+    'priority_tier' => 'tier_1_critical',
+    'reason'        => 'Human Owner strategic override confirmed via E2E test.',
+], $authToken);
+$ok = ($code === 200) && ((int)($json['data']['is_overridden'] ?? 0) === 1);
+reportTest('POST', '/resource-planning/priorities/override', 200, $code, 'Human-in-the-Loop Strategic Priority Override with Audit Trail', $ok, $pass, $total);
+
+// 31. List Forecast Snapshots (Flagged is_forecast_data = 1)
+[$code, $json] = requestHttp($baseUrl . '/resource-planning/forecasts?period_type=weekly', 'GET');
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1 && (($json['data'][0]['is_forecast_data'] ?? 0) == 1);
+reportTest('GET', '/resource-planning/forecasts', 200, $code, 'Retrieve Capacity Forecast Snapshots with Explicit Forecast Flag', $ok, $pass, $total);
+
+// 32. Generate Forecast Snapshot (Auth)
+[$code, $json] = requestHttp($baseUrl . '/resource-planning/forecasts/generate', 'POST', [
+    'start_date' => date('Y-m-d', strtotime('+7 days')),
+    'end_date'   => date('Y-m-d', strtotime('+13 days')),
+], $authToken);
+$ok = ($code === 200) && !empty($json['data']['snapshot_code']);
+reportTest('POST', '/resource-planning/forecasts/generate', 200, $code, 'Generate Forward-Looking Demand vs Supply Capacity Forecast', $ok, $pass, $total);
+
+// 33. List Gap Analyses
+[$code, $json] = requestHttp($baseUrl . '/resource-planning/gaps', 'GET');
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/resource-planning/gaps', 200, $code, 'List Identified Competency & Capacity Deficits', $ok, $pass, $total);
+
+// 34. Create Gap Analysis (Auth)
+[$code, $json] = requestHttp($baseUrl . '/resource-planning/gaps', 'POST', [
+    'gap_code'                 => 'GAP-E2E-' . strtoupper(substr(uniqid(), -4)),
+    'gap_category'             => 'skill_shortage',
+    'severity'                 => 'high',
+    'required_capacity_hours'  => 35.00,
+    'available_capacity_hours' => 15.00,
+    'recommended_action'       => 'train_existing_agent',
+    'action_plan_description'  => 'Initiate fast-track training course.',
+], $authToken);
+$testGapId = $json['data']['id'] ?? null;
+$ok = ($code === 201) && !empty($testGapId);
+reportTest('POST', '/resource-planning/gaps', 201, $code, 'Register Capacity Gap Analysis & Upskilling Action Plan', $ok, $pass, $total);
+
+// 35. Resolve Gap Analysis (Auth)
+if ($testGapId) {
+    [$code, $json] = requestHttp($baseUrl . "/resource-planning/gaps/{$testGapId}/resolve", 'POST', [
+        'action_notes' => 'Training completed and verified.',
+    ], $authToken);
+    $ok = ($code === 200) && (($json['data']['status'] ?? '') === 'resolved');
+    reportTest('POST', "/resource-planning/gaps/{$testGapId}/resolve", 200, $code, 'Mark Competency Gap Resolved upon Action Plan Execution', $ok, $pass, $total);
+}
+
+// 36. Decommission Operational Resource (Auth)
+if ($testResId) {
+    [$code, $json] = requestHttp($baseUrl . "/resource-planning/resources/{$testResId}", 'DELETE', null, $authToken);
+    $ok = ($code === 200);
+    reportTest('DELETE', "/resource-planning/resources/{$testResId}", 200, $code, 'Safely Decommission Operational Tool from Resource Registry', $ok, $pass, $total);
+}
+
+// -----------------------------------------------------------------------------
+// 17. Token Revocation
 // -----------------------------------------------------------------------------
 [$code, $json] = requestHttp($baseUrl . '/auth/logout', 'POST', null, $authToken);
 $ok = ($code === 200) && (($json['data']['revoked'] ?? false) === true);

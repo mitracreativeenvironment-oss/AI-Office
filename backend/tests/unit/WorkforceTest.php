@@ -53,7 +53,7 @@ final class WorkforceTest extends CIUnitTestCase
 
     public function testAgentCreationAndProfile(): void
     {
-        $testCode = 'AGT-TEST-' . rand(1000, 9999);
+        $testCode = 'AGT-TEST-' . uniqid();
         $created = $this->registryService->createAgent([
             'name'         => 'Test Specialist AI',
             'display_name' => 'QA Bot Tester',
@@ -79,7 +79,7 @@ final class WorkforceTest extends CIUnitTestCase
 
     public function testValidLifecycleChainToActive(): void
     {
-        $testCode = 'AGT-CHAIN-' . rand(1000, 9999);
+        $testCode = 'AGT-CHAIN-' . uniqid();
         $agent = $this->registryService->createAgent([
             'name'         => 'Chain Transition Agent',
             'agent_code'   => $testCode,

@@ -107,17 +107,26 @@
 | **Deliverable Reviews & Client Acceptance** | `COMPLETED` | Prompt 27 | Multi-tier review: Internal technical sign-off followed by formal external client acceptance gate |
 | **Interactive Project Portfolio UI** | `COMPLETED` | Prompt 27 | `ProjectManagementView.tsx` with Portfolio Overview, Table/Kanban views, 6-tab Workspace drill-down, and Client Directory |
 | **Unit & Integration Test Suite (Prompt 27)**| `COMPLETED`| Prompt 27 | 111/111 PHPUnit tests (790 assertions) + 241/241 REST integration endpoints passing 100% |
+| **Resource & Capacity Planning Schema** | `COMPLETED` | Prompt 28 | Batch 13: 9 relational tables covering resources, reservations, requests, allocations master, conflicts, portfolio priorities, forecast snapshots, gap analyses, audit events |
+| **Mathematical Agent Capacity Model** | `COMPLETED` | Prompt 28 | Available = Scheduled - Alloc - Reserved - Unavail; 5/2 shift compliance, gross 40h/week base, utilization tiers (underutilized to overallocated) |
+| **Internal Operations Capacity Ring-Fence** | `COMPLETED` | Prompt 28 | Continuous Executive Board autonomous reservation (15-25% capacity) protecting internal platform R&D, bizdev, governance & welfare |
+| **Resource Request & Multi-Stage Allocation**| `COMPLETED` | Prompt 28 | 9-state request lifecycle with automated capacity assessment, DoA Level A/B financial routing, and master schedule allocation binding |
+| **Automated Conflict Detection Center** | `COMPLETED` | Prompt 28 | Real-time collision detector for overallocations (>100%), 5/2 rest day violations, skill deficiencies, and maintenance outages |
+| **Multi-Criteria Portfolio Prioritization**| `COMPLETED` | Prompt 28 | Mathematical composite scoring (0.25S + 0.25C + 0.20V + 0.15U + 0.15F - 0.10R), calculated ranks, Priority Tiers 1-4 & human override audit |
+| **Capacity Forecasting & Gap Analysis** | `COMPLETED` | Prompt 28 | 4-week rolling demand vs supply snapshots explicitly tagged `is_forecast_data = 1`; workforce competency deficit remediation action plans |
+| **Resource Planning Interactive UI** | `COMPLETED` | Prompt 28 | `ResourcePlanningView.tsx` 9-tab enterprise control center integrated into navigation header, app shell & URL hash routing |
+| **Unit & Integration Test Suite (Prompt 28)**| `COMPLETED`| Prompt 28 | 124/124 PHPUnit tests (951 assertions) + 277/277 REST integration endpoints passing 100% |
 
 ---
 
 ## 2. Incomplete & Deferred Scope
 
-The initial 27 implementation prompts covering architecture, governance, workforce registry, scheduling, task collaboration, runtime execution, 3D VHQ, agent welfare operations, knowledge management, internal collaboration, and project management & delivery operations are fully implemented and verified.
+The initial 28 implementation prompts covering architecture, governance, workforce registry, scheduling, task collaboration, runtime execution, 3D VHQ, agent welfare operations, knowledge management, internal collaboration, project delivery, and resource & capacity planning are fully implemented and verified.
 
 ---
 
 ## 3. Next Implementation Recommendation
 
-The Project Management, Client Engagement, Project Lifecycle & Delivery Operations subsystem is **100% complete, fully verified, and passing all tests without regression (241/241 REST endpoints, 111/111 PHPUnit tests, 0 frontend build errors)**.
+The Resource & Capacity Planning, Portfolio Prioritization & Operational Allocation subsystem is **100% complete, fully verified, and passing all tests without regression (277/277 REST endpoints, 124/124 PHPUnit tests, 0 frontend build errors)**.
 
-**Owner Approval Gate**: Strict compliance gate is now active. Awaiting explicit Human Owner authorization before proceeding to Prompt 28.
+**Owner Approval Gate**: Strict compliance gate is now active. Awaiting explicit Human Owner authorization before proceeding to Prompt 29.

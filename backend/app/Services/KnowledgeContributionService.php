@@ -84,7 +84,7 @@ class KnowledgeContributionService
      */
     public function submitContribution(array $data, ?int $actorAgentId = null, ?int $actorUserId = null): array
     {
-        $code = trim($data['contribution_code'] ?? 'KBC-' . date('Y') . '-' . rand(100, 999));
+        $code = trim($data['contribution_code'] ?? 'KBC-' . date('Y') . '-' . strtoupper(substr(uniqid(), -6)));
         $now = date('Y-m-d H:i:s');
 
         $contributorType = $data['contributor_type'] ?? ($actorAgentId ? 'agent' : 'human');

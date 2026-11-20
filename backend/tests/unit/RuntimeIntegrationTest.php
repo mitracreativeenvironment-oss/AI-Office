@@ -24,6 +24,7 @@ final class RuntimeIntegrationTest extends CIUnitTestCase
     protected AgentProvisioningService $provisioningService;
     protected RuntimeHealthService $healthService;
     protected TaskManagementService $taskService;
+    protected ?string $originalDutyType = null;
 
     protected function setUp(): void
     {
@@ -42,6 +43,31 @@ final class RuntimeIntegrationTest extends CIUnitTestCase
             ->where('agent_id', 2)
             ->where('availability_type', 'planned_leave')
             ->delete();
+
+        // Ensure Agent 2 has working shift for today during runtime execution unit test, and restore later
+        $todayRow = \Config\Database::connect()->table('workforce_duty_assignments')
+            ->where('agent_id', 2)
+            ->where('assignment_date', date('Y-m-d'))
+            ->get()->getRowArray();
+        if ($todayRow) {
+            $this->originalDutyType = $todayRow['duty_type'];
+            if ($todayRow['duty_type'] !== 'working') {
+                \Config\Database::connect()->table('workforce_duty_assignments')
+                    ->where('id', $todayRow['id'])
+                    ->update(['duty_type' => 'working']);
+            }
+        }
+    }
+
+    protected function tearDown(): void
+    {
+        if ($this->originalDutyType !== null) {
+            \Config\Database::connect()->table('workforce_duty_assignments')
+                ->where('agent_id', 2)
+                ->where('assignment_date', date('Y-m-d'))
+                ->update(['duty_type' => $this->originalDutyType]);
+        }
+        parent::tearDown();
     }
 
     public function testServicesAndControllerInstantiate(): void
@@ -186,7 +212,7 @@ final class RuntimeIntegrationTest extends CIUnitTestCase
     public function testCriticalToolHumanApprovalEnforcement(): void
     {
         $critTool = $this->toolService->createTool([
-            'tool_code'               => 'TOOL-CRIT-' . rand(100, 999),
+            'tool_code'               => 'TOOL-CRIT-' . uniqid(),
             'name'                    => 'Critical Destructive Tool',
             'category'                => 'system',
             'risk_level'              => 'critical',
