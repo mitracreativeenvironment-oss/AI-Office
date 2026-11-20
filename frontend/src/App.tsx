@@ -9,12 +9,13 @@ import { KnowledgeManagementView } from './components/KnowledgeManagementView';
 import { CollaborationView } from './components/CollaborationView';
 import { ProjectManagementView } from './components/ProjectManagementView';
 import { ResourcePlanningView } from './components/ResourcePlanningView';
+import { PerformanceManagementView } from './components/PerformanceManagementView';
 import { apiClient } from './services/apiClient';
 import { authService } from './services/authService';
 import type { User } from './types/auth';
 
 export default function App() {
-  const getInitialView = (): 'dashboard' | 'vhq' | 'runtime' | 'welfare' | 'knowledge' | 'collaboration' | 'projects' | 'resources' => {
+  const getInitialView = (): 'dashboard' | 'vhq' | 'runtime' | 'welfare' | 'knowledge' | 'collaboration' | 'projects' | 'resources' | 'performance' => {
     const hash = window.location.hash.toLowerCase();
     if (hash === '#vhq' || hash === '#/vhq') return 'vhq';
     if (hash === '#dashboard' || hash === '#/dashboard') return 'dashboard';
@@ -24,6 +25,7 @@ export default function App() {
     if (hash === '#collaboration' || hash === '#/collaboration') return 'collaboration';
     if (hash === '#projects' || hash === '#/projects') return 'projects';
     if (hash === '#resources' || hash === '#/resources') return 'resources';
+    if (hash === '#performance' || hash === '#/performance') return 'performance';
     const params = new URLSearchParams(window.location.search);
     const viewParam = params.get('view');
     if (viewParam === 'vhq') return 'vhq';
@@ -33,10 +35,11 @@ export default function App() {
     if (viewParam === 'collaboration') return 'collaboration';
     if (viewParam === 'projects') return 'projects';
     if (viewParam === 'resources') return 'resources';
+    if (viewParam === 'performance') return 'performance';
     return 'dashboard';
   };
 
-  const [currentView, setCurrentView] = useState<'dashboard' | 'vhq' | 'runtime' | 'welfare' | 'knowledge' | 'collaboration' | 'projects' | 'resources'>(getInitialView);
+  const [currentView, setCurrentView] = useState<'dashboard' | 'vhq' | 'runtime' | 'welfare' | 'knowledge' | 'collaboration' | 'projects' | 'resources' | 'performance'>(getInitialView);
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'degraded' | 'offline'>('checking');
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
 
@@ -85,7 +88,7 @@ export default function App() {
     return () => clearInterval(timer);
   }, [checkConnectivity, restoreSession]);
 
-  const handleNavigate = (view: 'dashboard' | 'vhq' | 'runtime' | 'welfare' | 'knowledge' | 'collaboration' | 'projects' | 'resources') => {
+  const handleNavigate = (view: 'dashboard' | 'vhq' | 'runtime' | 'welfare' | 'knowledge' | 'collaboration' | 'projects' | 'resources' | 'performance') => {
     setCurrentView(view);
     window.location.hash = `#${view}`;
   };
@@ -148,8 +151,10 @@ export default function App() {
             isAuthenticated={!!currentUser}
             onOpenLogin={() => setIsLoginOpen(true)}
           />
-        ) : (
+        ) : currentView === 'resources' ? (
           <ResourcePlanningView currentUser={currentUser} />
+        ) : (
+          <PerformanceManagementView currentUser={currentUser} />
         )}
       </div>
     </div>

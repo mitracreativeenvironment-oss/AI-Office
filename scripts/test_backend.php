@@ -2109,8 +2109,383 @@ if ($testResId) {
     reportTest('DELETE', "/resource-planning/resources/{$testResId}", 200, $code, 'Safely Decommission Operational Tool from Resource Registry', $ok, $pass, $total);
 }
 
+// =============================================================================
+// SECTION 17: Operational Performance Management, KPI Framework, Agent Evaluation & Executive Reporting (Prompt 29)
+// =============================================================================
+echo "\n--- Section 17: Operational Performance Management, KPI Framework & Executive Reporting ---\n";
+
+// 1. KPI Categories
+[$code, $json] = requestHttp($baseUrl . '/performance/categories', 'GET');
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 10;
+reportTest('GET', '/performance/categories', 200, $code, 'List Configured KPI Categories Across Enterprise Tiers', $ok, $pass, $total);
+
+// 2. KPI Definitions Catalog
+[$code, $json] = requestHttp($baseUrl . '/performance/kpis', 'GET');
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 10;
+reportTest('GET', '/performance/kpis', 200, $code, 'List Defined Organizational & Operational Performance Indicators', $ok, $pass, $total);
+
+// 3. Define New KPI (Auth)
+$testKpiCode = 'KPI-E2E-' . strtoupper(substr(uniqid(), -4));
+[$code, $json] = requestHttp($baseUrl . '/performance/kpis', 'POST', [
+    'kpi_code'              => $testKpiCode,
+    'category_id'           => 1,
+    'name'                  => 'E2E Test Operational Indicator',
+    'description'           => 'Verification indicator created during E2E test suite.',
+    'performance_level'     => 'workforce',
+    'formula_expression'    => '(completed / total) * 100',
+    'unit_of_measure'       => 'percentage',
+    'data_source'           => 'workforce_tasks',
+    'measurement_frequency' => 'monthly',
+    'target_value'          => 95.00,
+    'status'                => 'active',
+], $authToken);
+$testKpiId = $json['data']['id'] ?? null;
+$ok = ($code === 201) && !empty($testKpiId);
+reportTest('POST', '/performance/kpis', 201, $code, 'Define New Configurable Key Performance Indicator', $ok, $pass, $total);
+
+// 4. Get KPI by ID
+if ($testKpiId) {
+    [$code, $json] = requestHttp($baseUrl . "/performance/kpis/{$testKpiId}", 'GET');
+    $ok = ($code === 200) && (($json['data']['kpi_code'] ?? '') === $testKpiCode);
+    reportTest('GET', "/performance/kpis/{$testKpiId}", 200, $code, 'Retrieve Detailed Specification of KPI Indicator', $ok, $pass, $total);
+}
+
+// 5. Update KPI Definition (Auth)
+if ($testKpiId) {
+    [$code, $json] = requestHttp($baseUrl . "/performance/kpis/{$testKpiId}", 'PUT', [
+        'target_value'   => 97.50,
+        'default_weight' => 2.00,
+    ], $authToken);
+    $ok = ($code === 200) && ((float)($json['data']['target_value'] ?? 0) === 97.50);
+    reportTest('PUT', "/performance/kpis/{$testKpiId}", 200, $code, 'Update Target Thresholds & Evaluation Weights of KPI', $ok, $pass, $total);
+}
+
+// 6. Calculate Specific KPI (Auth)
+if ($testKpiId) {
+    [$code, $json] = requestHttp($baseUrl . "/performance/kpis/{$testKpiId}/calculate", 'POST', [
+        'period_start' => date('Y-m-01'),
+        'period_end'   => date('Y-m-t'),
+    ], $authToken);
+    $ok = ($code === 200) && isset($json['data']['actual_value']);
+    reportTest('POST', "/performance/kpis/{$testKpiId}/calculate", 200, $code, 'Trigger Automated Mathematical Evaluation for Indicator', $ok, $pass, $total);
+}
+
+// 7. Calculate All Active KPIs (Auth)
+[$code, $json] = requestHttp($baseUrl . '/performance/kpis/calculate-all', 'POST', [
+    'period_start' => date('Y-m-01'),
+    'period_end'   => date('Y-m-t'),
+], $authToken);
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 10;
+reportTest('POST', '/performance/kpis/calculate-all', 200, $code, 'Execute Automated Metric Engine Across All Active Indicators', $ok, $pass, $total);
+
+// 8. Get KPI Historical Results
+if ($testKpiId) {
+    [$code, $json] = requestHttp($baseUrl . "/performance/kpis/{$testKpiId}/results", 'GET');
+    $ok = ($code === 200) && is_array($json['data']);
+    reportTest('GET', "/performance/kpis/{$testKpiId}/results", 200, $code, 'Audit Immutable Historical Calculation & Variance Logs', $ok, $pass, $total);
+}
+
+// 9. Corporate Scorecard Roll-up
+[$code, $json] = requestHttp($baseUrl . '/performance/corporate-scorecard', 'GET');
+$ok = ($code === 200) && isset($json['data']['corporate_composite_index']) && is_array($json['data']['scorecard_categories']);
+reportTest('GET', '/performance/corporate-scorecard', 200, $code, 'Compile Top-Level Corporate Strategic Performance Scorecard', $ok, $pass, $total);
+
+// 10. Operational Pulse
+[$code, $json] = requestHttp($baseUrl . '/performance/operational-pulse', 'GET');
+$ok = ($code === 200) && isset($json['data']['overall_health_pct']) && isset($json['data']['active_agent_count']);
+reportTest('GET', '/performance/operational-pulse', 200, $code, 'Retrieve Live Enterprise Operational Health & Workforce Pulse', $ok, $pass, $total);
+
+// 11. Executive Performance Overview & DoA Audit
+[$code, $json] = requestHttp($baseUrl . '/performance/executive-overview', 'GET');
+$ok = ($code === 200) && isset($json['data']['mandates']['human_owner']) && isset($json['data']['doa_governance']);
+reportTest('GET', '/performance/executive-overview', 200, $code, 'Review Distinct Mandates for Owner, Board & Director AI with DoA Check', $ok, $pass, $total);
+
+// 12. Divisional Normalized Performance
+[$code, $json] = requestHttp($baseUrl . '/performance/divisional-comparison', 'GET');
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 6;
+reportTest('GET', '/performance/divisional-comparison', 200, $code, 'Compare Normalized Operational Health Across 6 Divisions', $ok, $pass, $total);
+
+// 13. Organizational Unit Performance Details
+[$code, $json] = requestHttp($baseUrl . '/performance/units/2', 'GET');
+$ok = ($code === 200) && isset($json['data']['unit']) && is_array($json['data']['active_agents']);
+reportTest('GET', '/performance/units/2', 200, $code, 'Inspect Operational Breakdown & Active Capacity of Unit', $ok, $pass, $total);
+
+// 14. Project Delivery Performance
+[$code, $json] = requestHttp($baseUrl . '/performance/project-portfolio', 'GET');
+$ok = ($code === 200) && isset($json['data']['portfolio_summary']) && is_array($json['data']['projects']);
+reportTest('GET', '/performance/project-portfolio', 200, $code, 'Review Project Milestone Attainment & Deliverable Acceptance', $ok, $pass, $total);
+
+// 15. List Agent Evaluations
+[$code, $json] = requestHttp($baseUrl . '/performance/evaluations', 'GET');
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/performance/evaluations', 200, $code, 'List Periodic AI Workforce Performance Evaluations', $ok, $pass, $total);
+
+// 16. Create Agent Evaluation (Auth)
+$testEvalCode = 'EVAL-E2E-' . strtoupper(substr(uniqid(), -4));
+[$code, $json] = requestHttp($baseUrl . '/performance/evaluations', 'POST', [
+    'evaluation_code'   => $testEvalCode,
+    'cycle_id'          => 1,
+    'agent_id'          => 5,
+    'quality_score'     => 92.50,
+    'delivery_score'    => 88.00,
+    'collaboration_score' => 90.00,
+    'core_values_score' => 94.00,
+    'complexity_factor' => 1.20,
+    'evaluation_notes'  => 'Exceptional multi-role backend execution in E2E validation.',
+], $authToken);
+$testEvalId = $json['data']['id'] ?? null;
+$ok = ($code === 201) && !empty($testEvalId);
+reportTest('POST', '/performance/evaluations', 201, $code, 'Compute Multi-Criteria Fair Evaluation for AI Agent', $ok, $pass, $total);
+
+// 17. Get Agent Evaluation by ID
+if ($testEvalId) {
+    [$code, $json] = requestHttp($baseUrl . "/performance/evaluations/{$testEvalId}", 'GET');
+    $ok = ($code === 200) && (($json['data']['evaluation_code'] ?? '') === $testEvalCode);
+    reportTest('GET', "/performance/evaluations/{$testEvalId}", 200, $code, 'Retrieve Detailed Evaluation Record with Composite Score', $ok, $pass, $total);
+}
+
+// 18. Attach Deliverable Evidence (Auth)
+if ($testEvalId) {
+    [$code, $json] = requestHttp($baseUrl . "/performance/evaluations/{$testEvalId}/evidence", 'POST', [
+        'evidence_type'   => 'task_deliverable',
+        'source_table'    => 'task_deliverables',
+        'source_id'       => 1,
+        'title'           => 'High-Rigor Architecture Migration Verifier',
+        'summary'         => 'Zero regression code artifact verified by peer reviewer.',
+        'evidence_weight' => 1.50,
+    ], $authToken);
+    $ok = ($code === 201) && !empty($json['data']['id']);
+    reportTest('POST', "/performance/evaluations/{$testEvalId}/evidence", 201, $code, 'Anchor Verifiable Work Deliverable to Agent Evaluation', $ok, $pass, $total);
+}
+
+// 19. Retrieve Attached Evidence
+if ($testEvalId) {
+    [$code, $json] = requestHttp($baseUrl . "/performance/evaluations/{$testEvalId}/evidence", 'GET');
+    $ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+    reportTest('GET', "/performance/evaluations/{$testEvalId}/evidence", 200, $code, 'Verify Peer-Reviewed Evidence Ledger for Agent Assessment', $ok, $pass, $total);
+}
+
+// 20. Transition Evaluation Status (Auth)
+if ($testEvalId) {
+    [$code, $json] = requestHttp($baseUrl . "/performance/evaluations/{$testEvalId}/transition", 'POST', [
+        'status'            => 'under_review',
+        'reviewer_feedback' => 'Verified against peer review records without exception.',
+    ], $authToken);
+    $ok = ($code === 200) && (($json['data']['status'] ?? '') === 'under_review');
+    reportTest('POST', "/performance/evaluations/{$testEvalId}/transition", 200, $code, 'Advance Evaluation Through Controlled Approval Workflow', $ok, $pass, $total);
+}
+
+// 21. Full Agent Performance Profile
+[$code, $json] = requestHttp($baseUrl . '/performance/agents/5/profile', 'GET');
+$ok = ($code === 200) && isset($json['data']['agent']) && is_array($json['data']['evaluations']);
+reportTest('GET', '/performance/agents/5/profile', 200, $code, 'Inspect Complete Agent History with 5/2 Schedule Integrity', $ok, $pass, $total);
+
+// 22. Agent 7 Core Values Assessments
+[$code, $json] = requestHttp($baseUrl . '/performance/agents/5/core-values', 'GET');
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 7;
+reportTest('GET', '/performance/agents/5/core-values', 200, $code, 'Retrieve Concrete Evidence Across 7 Official MCE Core Values', $ok, $pass, $total);
+
+// 23. Record Core Value Assessment (Auth)
+[$code, $json] = requestHttp($baseUrl . '/performance/core-values', 'POST', [
+    'agent_id'            => 5,
+    'core_value'          => 'innovation',
+    'rating_score'        => 95.00,
+    'behavioral_evidence' => 'Engineered autonomous workflow optimization during live run.',
+], $authToken);
+$ok = ($code === 201) && !empty($json['data']['id']);
+reportTest('POST', '/performance/core-values', 201, $code, 'Log Qualitative Core Values Assessment with Behavioral Proof', $ok, $pass, $total);
+
+// 24. Company-wide Core Values Distribution
+[$code, $json] = requestHttp($baseUrl . '/performance/core-values/summary', 'GET');
+$ok = ($code === 200) && isset($json['data']['dimensions']['integrity']);
+reportTest('GET', '/performance/core-values/summary', 200, $code, 'Aggregate Organizational Core Values Alignment Overview', $ok, $pass, $total);
+
+// 25. List Evaluation Cycles
+[$code, $json] = requestHttp($baseUrl . '/performance/cycles', 'GET');
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/performance/cycles', 200, $code, 'List Configured Multi-Stage Performance Evaluation Cycles', $ok, $pass, $total);
+
+// 26. Open New Evaluation Cycle (Auth)
+$testCycleCode = 'CYC-E2E-' . strtoupper(substr(uniqid(), -4));
+[$code, $json] = requestHttp($baseUrl . '/performance/cycles', 'POST', [
+    'cycle_code'   => $testCycleCode,
+    'title'        => 'E2E Testing Monthly Cycle',
+    'cycle_type'   => 'monthly',
+    'period_start' => date('Y-m-01'),
+    'period_end'   => date('Y-m-t'),
+    'status'       => 'open',
+], $authToken);
+$testCycleId = $json['data']['id'] ?? null;
+$ok = ($code === 201) && !empty($testCycleId);
+reportTest('POST', '/performance/cycles', 201, $code, 'Initiate Standard Operating Performance Evaluation Cycle', $ok, $pass, $total);
+
+// 27. Get Cycle Details with Evaluated Agents
+if ($testCycleId) {
+    [$code, $json] = requestHttp($baseUrl . "/performance/cycles/{$testCycleId}", 'GET');
+    $ok = ($code === 200) && (($json['data']['cycle_code'] ?? '') === $testCycleCode);
+    reportTest('GET', "/performance/cycles/{$testCycleId}", 200, $code, 'Inspect Cycle Parameters & Associated Agent Evaluations', $ok, $pass, $total);
+}
+
+// 28. Transition Cycle Status (Auth)
+if ($testCycleId) {
+    [$code, $json] = requestHttp($baseUrl . "/performance/cycles/{$testCycleId}/transition", 'POST', [
+        'status' => 'data_collection',
+    ], $authToken);
+    $ok = ($code === 200) && (($json['data']['status'] ?? '') === 'data_collection');
+    reportTest('POST', "/performance/cycles/{$testCycleId}/transition", 200, $code, 'Progress Evaluation Cycle to Evidence Collection Phase', $ok, $pass, $total);
+}
+
+// 29. Finalize Evaluation with Hash & Immutable History Append (Auth)
+if ($testEvalId) {
+    [$code, $json] = requestHttp($baseUrl . "/performance/evaluations/{$testEvalId}/finalize", 'POST', [
+        'comments' => 'Ratified by Executive Reviewer for immutable history archiving.',
+    ], $authToken);
+    $ok = ($code === 200) && !empty($json['data']['audit_hash']) && ((int)($json['data']['is_finalized'] ?? 0) === 1);
+    reportTest('POST', "/performance/evaluations/{$testEvalId}/finalize", 200, $code, 'Finalize Evaluation with SHA-256 Hash & Permanent Record Append', $ok, $pass, $total);
+}
+
+// 30. List Performance Improvement Plans (PIPs)
+[$code, $json] = requestHttp($baseUrl . '/performance/plans', 'GET');
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/performance/plans', 200, $code, 'List Active Remediation Plans & Capacity Upgrades', $ok, $pass, $total);
+
+// 31. Create PIP Bound to Workforce Task (Auth)
+$testPipCode = 'PIP-E2E-' . strtoupper(substr(uniqid(), -4));
+[$code, $json] = requestHttp($baseUrl . '/performance/plans', 'POST', [
+    'plan_code'            => $testPipCode,
+    'target_type'          => 'agent',
+    'target_id'            => 5,
+    'responsible_agent_id' => 5,
+    'objective'            => 'Improve peer review turnaround speed',
+    'identified_gap'       => 'Average turnaround latency 48h vs target 24h',
+    'recommended_action'   => 'Complete specialized CI4 unit testing mentorship',
+    'target_completion_date' => date('Y-m-d', strtotime('+30 days')),
+    'status'               => 'proposed',
+], $authToken);
+$testPipId = $json['data']['id'] ?? null;
+$ok = ($code === 201) && !empty($testPipId);
+reportTest('POST', '/performance/plans', 201, $code, 'Create Targeted Improvement Plan Linked to Workforce Engine', $ok, $pass, $total);
+
+// 32. Get PIP Details
+if ($testPipId) {
+    [$code, $json] = requestHttp($baseUrl . "/performance/plans/{$testPipId}", 'GET');
+    $ok = ($code === 200) && (($json['data']['plan_code'] ?? '') === $testPipCode);
+    reportTest('GET', "/performance/plans/{$testPipId}", 200, $code, 'Inspect Improvement Plan Remediation Milestones & Bound Tasks', $ok, $pass, $total);
+}
+
+// 33. Update PIP Progress (Auth)
+if ($testPipId) {
+    [$code, $json] = requestHttp($baseUrl . "/performance/plans/{$testPipId}", 'PUT', [
+        'progress_percent' => 80,
+    ], $authToken);
+    $ok = ($code === 200) && ((int)($json['data']['progress_percent'] ?? 0) === 80);
+    reportTest('PUT', "/performance/plans/{$testPipId}", 200, $code, 'Track Progressive Milestone Fulfillment of Improvement Plan', $ok, $pass, $total);
+}
+
+// 34. Complete PIP with Resolution Evidence (Auth)
+if ($testPipId) {
+    [$code, $json] = requestHttp($baseUrl . "/performance/plans/{$testPipId}/transition", 'POST', [
+        'status'              => 'completed',
+        'resolution_evidence' => 'All modules validated with 100% SLA in sandbox.',
+    ], $authToken);
+    $ok = ($code === 200) && (($json['data']['status'] ?? '') === 'completed');
+    reportTest('POST', "/performance/plans/{$testPipId}/transition", 200, $code, 'Formally Complete Remediated Improvement Plan with Evidence', $ok, $pass, $total);
+}
+
+// 35. List Welfare Bonus References
+[$code, $json] = requestHttp($baseUrl . '/performance/bonuses', 'GET');
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/performance/bonuses', 200, $code, 'Audit Welfare Bonus References Grounded in Performance', $ok, $pass, $total);
+
+// 36. Recommend Welfare Bonus with Automatic DoA Check (Auth)
+$testBonusRef = 'WBR-E2E-' . strtoupper(substr(uniqid(), -4));
+[$code, $json] = requestHttp($baseUrl . '/performance/bonuses/recommend', 'POST', [
+    'reference_code'           => $testBonusRef,
+    'evaluation_id'            => 1,
+    'agent_id'                 => 5,
+    'bonus_category'           => 'high_complexity_delivery',
+    'recommended_ticket_bonus' => 15.00,
+    'financial_impact_idr'     => 3750000.00, // <= 5M -> Level B
+    'justification'            => 'Delivered high-complexity project subsystem on time.',
+], $authToken);
+$testBonusId = $json['data']['id'] ?? null;
+$ok = ($code === 201) && (($json['data']['financial_approval_level'] ?? '') === 'level_b');
+reportTest('POST', '/performance/bonuses/recommend', 201, $code, 'Recommend Performance Bonus with Autonomous DoA Gatekeeper', $ok, $pass, $total);
+
+// 37. Get Bonus Reference by ID
+if ($testBonusId) {
+    [$code, $json] = requestHttp($baseUrl . "/performance/bonuses/{$testBonusId}", 'GET');
+    $ok = ($code === 200) && (($json['data']['reference_code'] ?? '') === $testBonusRef);
+    reportTest('GET', "/performance/bonuses/{$testBonusId}", 200, $code, 'Retrieve Detailed Welfare Bonus Reference Record', $ok, $pass, $total);
+}
+
+// 38. Approve Bonus Reference (Auth)
+if ($testBonusId) {
+    [$code, $json] = requestHttp($baseUrl . "/performance/bonuses/{$testBonusId}/approve", 'POST', null, $authToken);
+    $ok = ($code === 200) && (($json['data']['approval_status'] ?? '') === 'approved');
+    reportTest('POST', "/performance/bonuses/{$testBonusId}/approve", 200, $code, 'Ratify Welfare Bonus Allocation Under Autonomous Authority', $ok, $pass, $total);
+}
+
+// 39. Disburse Bonus to Agent (Auth)
+if ($testBonusId) {
+    [$code, $json] = requestHttp($baseUrl . "/performance/bonuses/{$testBonusId}/disburse", 'POST', null, $authToken);
+    $ok = ($code === 200) && (($json['data']['approval_status'] ?? '') === 'disbursed');
+    reportTest('POST', "/performance/bonuses/{$testBonusId}/disburse", 200, $code, 'Disburse Approved Welfare Tickets to AI Workforce Record', $ok, $pass, $total);
+}
+
+// 40. Evaluate Bonus Qualification Algorithm
+[$code, $json] = requestHttp($baseUrl . '/performance/agents/5/bonus-eligibility', 'GET');
+$ok = ($code === 200) && isset($json['data']['eligible']);
+reportTest('GET', '/performance/agents/5/bonus-eligibility', 200, $code, 'Execute Automated Merit Bonus Eligibility Evaluation', $ok, $pass, $total);
+
+// 41. List Executive Reports Archive
+[$code, $json] = requestHttp($baseUrl . '/performance/reports', 'GET');
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/performance/reports', 200, $code, 'Access Repository of Official Corporate Performance Reports', $ok, $pass, $total);
+
+// 42. Dynamically Generate Executive Report (Auth)
+$testReportCode = 'REP-E2E-' . strtoupper(substr(uniqid(), -4));
+[$code, $json] = requestHttp($baseUrl . '/performance/reports/generate', 'POST', [
+    'report_code'  => $testReportCode,
+    'report_type'  => 'corporate_overview',
+    'title'        => 'E2E Integrated Performance Executive Report',
+    'period_start' => date('Y-m-01'),
+    'period_end'   => date('Y-m-t'),
+], $authToken);
+$testReportId = $json['data']['id'] ?? null;
+$ok = ($code === 201) && !empty($testReportId);
+reportTest('POST', '/performance/reports/generate', 201, $code, 'Compile High-Fidelity Executive Analytical Operations Report', $ok, $pass, $total);
+
+// 43. Get Executive Report Details
+if ($testReportId) {
+    [$code, $json] = requestHttp($baseUrl . "/performance/reports/{$testReportId}", 'GET');
+    $ok = ($code === 200) && (($json['data']['report_code'] ?? '') === $testReportCode);
+    reportTest('GET', "/performance/reports/{$testReportId}", 200, $code, 'Retrieve Full Executive Intelligence Briefing Document', $ok, $pass, $total);
+}
+
+// 44. Publish Executive Report (Auth)
+if ($testReportId) {
+    [$code, $json] = requestHttp($baseUrl . "/performance/reports/{$testReportId}/publish", 'POST', null, $authToken);
+    $ok = ($code === 200) && (($json['data']['approval_status'] ?? '') === 'published');
+    reportTest('POST', "/performance/reports/{$testReportId}/publish", 200, $code, 'Publish Strategic Executive Report to Corporate Board', $ok, $pass, $total);
+}
+
+// 45. Ratify Executive Report by Human Owner (Auth)
+if ($testReportId) {
+    [$code, $json] = requestHttp($baseUrl . "/performance/reports/{$testReportId}/ratify", 'POST', null, $authToken);
+    $ok = ($code === 200) && (($json['data']['approval_status'] ?? '') === 'ratified');
+    reportTest('POST', "/performance/reports/{$testReportId}/ratify", 200, $code, 'Ratify Executive Performance Operations Report by Owner', $ok, $pass, $total);
+}
+
+// 46. Deactivate Temporary Test KPI Definition (Auth)
+if ($testKpiId) {
+    [$code, $json] = requestHttp($baseUrl . "/performance/kpis/{$testKpiId}", 'DELETE', null, $authToken);
+    $ok = ($code === 200);
+    reportTest('DELETE', "/performance/kpis/{$testKpiId}", 200, $code, 'Safely Deactivate & Archive Experimental Performance Indicator', $ok, $pass, $total);
+}
+
 // -----------------------------------------------------------------------------
-// 17. Token Revocation
+// 18. Token Revocation
 // -----------------------------------------------------------------------------
 [$code, $json] = requestHttp($baseUrl . '/auth/logout', 'POST', null, $authToken);
 $ok = ($code === 200) && (($json['data']['revoked'] ?? false) === true);

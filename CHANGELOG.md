@@ -6,6 +6,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.14.0] - 2026-11-21 — Operational Performance Management, KPI Framework, Agent Performance Evaluation & Executive Reporting Milestone (Prompt 29)
+
+### Added
+- **Database Schema Batch 14 (`CreatePerformanceManagementSchema.php`)**:
+  - Implemented 11 relational tables: `kpi_categories`, `kpi_definitions`, `kpi_results`, `performance_evaluation_cycles`, `agent_performance_evaluations`, `agent_evaluation_evidence`, `core_values_assessments`, `performance_improvement_plans`, `welfare_bonus_references`, `executive_reports`, `performance_audit_trail`.
+  - Configured robust primary keys, compound indexes, and foreign key relationships with strict 64-char identifier limits.
+- **Database Seeder (`PerformanceManagementSeeder.php`)**:
+  - Seeded 10 enterprise KPI categories across strategic, operational, project, workforce, quality, customer, financial, innovation, knowledge management, and governance tiers.
+  - Seeded 10 authoritative standard KPI definitions with mathematical formulas, targets, warning/critical thresholds, and weighted distributions.
+  - Seeded monthly evaluation cycle `CYC-2026-M11` with multi-agent evaluations (Agents 5, 2, 1), composite scores, score bands, and 64-character SHA-256 audit hashes.
+  - Seeded verified deliverable evidence anchors referencing actual task deliveries and peer review records.
+  - Seeded qualitative behavioral assessments across the 7 official MCE Core Values (Integrity, Innovation, Collaboration, Excellence, Adaptability, Customer-Centric, Sustainability).
+  - Seeded Performance Improvement Plan `PIP-2026-001` bound directly to `workforce_tasks.id` without duplicating the task engine.
+  - Seeded Welfare Bonus Reference `WBR-2026-001` under Level B autonomous governance ($ \le \text{IDR } 5,000,000 $).
+  - Seeded formal C-suite Corporate Strategic Overview Executive Report `REP-CORP-2026-M11` with structured analytical JSON summaries.
+- **Backend Domain Services (12 Subsystem Services)**:
+  - `KpiCatalogService.php`: Catalog administration, category listing, filterable indicator queries, and audit logging.
+  - `MetricCalculationService.php`: Automated mathematical metric evaluation across live transactional ledgers, variance tracking, data status tagging (`verified` vs `estimated`), and anti-double-counting flags.
+  - `CorporatePerformanceService.php`: Top-level corporate performance scorecard roll-up, operational health pulse, and governance adherence checks.
+  - `ExecutivePerformanceService.php`: Distinct 3-tier mandate evaluations for Human Owner, Continuous Executive Board, and Director AI with DoA financial compliance audits.
+  - `OrganizationalPerformanceService.php`: Normalized operational performance indices across the 6 KBLI corporate divisions and individual units.
+  - `ProjectPerformanceService.php`: Project delivery performance, milestone attainment ratios, and deliverable review acceptance roll-ups.
+  - `AgentEvaluationService.php`: Fair multi-criteria scoring (Quality, Delivery, Collaboration, Core Values, Complexity multiplier), 5/2 shift schedule protection (`duty_type = 'rest'` zero penalties), verifiable evidence attachment, and immutable append to `ai_agent_performance_history`.
+  - `CoreValuesAssessmentService.php`: Qualitative assessment matrix across the 7 MCE Core Values and company-wide alignment distribution.
+  - `EvaluationWorkflowService.php`: 10-stage evaluation cycle state machine (`draft` &rarr; `open` &rarr; `data_collection` &rarr; ... &rarr; `finalized`), finalization seal, and dispute resolution.
+  - `ImprovementPlanService.php`: Remediation lifecycle management, task binding to `workforce_tasks`, milestone progress tracking, and resolution verification.
+  - `WelfareBonusAdapterService.php`: Merit bonus recommendation, strict Delegated Authority gatekeeper (Level A $> 5\text{M}$ Owner requirement vs Level B $\le 5\text{M}$ Board autonomy), and disbursement to welfare periods without KPI score purchasing.
+  - `ExecutiveReportingService.php`: Dynamic C-suite briefing generation, structured JSON highlights, risks, recommendations, publication, and Owner ratification.
+- **REST API Controller & Routing**:
+  - `PerformanceManagementController.php`: 46 endpoints under `/api/v1/performance/*` with standardized JSON envelopes, robust error handling, and RBAC authentication guards.
+  - Registered under `backend/app/Config/Routes.php`.
+- **Frontend Integration (React 19 + TypeScript + Vite 8)**:
+  - `performance.ts`: Full TypeScript domain definitions and interfaces.
+  - `performanceService.ts`: Centralized typed API service client for all 46 endpoints.
+  - `PerformanceManagementView.tsx`: Enterprise control center with 9 operational tabs (Overview & Scorecard, KPI Catalog, Executive Performance, Divisions & Units, AI Workforce Evaluations, Core Values, Workflow Cycles, Improvement Plans, DoA Bonuses & Reports) and interactive modals.
+  - Wired into `NavigationHeader.tsx`, `App.tsx`, and URL hash routing (`#performance`).
+- **Testing & Quality Assurance**:
+  - `PerformanceManagementTest.php`: 13 PHPUnit test cases, 100 assertions passing 100% (137 total backend unit tests, 1,099 assertions passing 100% across entire backend test suite).
+  - `scripts/test_backend.php`: Section 17 added with 46 comprehensive E2E integration test endpoints (323/323 REST endpoints passing 100%).
+  - `npm --prefix frontend run build`: Clean production bundle compilation with Vite 8 (0 errors).
+- **Documentation**:
+  - `docs/architecture/OPERATIONAL-PERFORMANCE-MANAGEMENT-ARCHITECTURE.md`
+  - `docs/operations/PERFORMANCE-EVALUATION-RUNBOOK.md`
+  - `docs/implementation/PERFORMANCE-MANAGEMENT-READINESS.md`
+  - `docs/implementation/IMPLEMENTATION-STATUS.md`
+
 ## [0.13.0] - 2026-11-21 — Resource & Capacity Planning, Portfolio Prioritization & Operational Allocation Milestone (Prompt 28)
 
 ### Added

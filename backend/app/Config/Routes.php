@@ -486,4 +486,73 @@ $routes->group('api/v1', static function ($routes) {
             $routes->post('gaps/(:num)/resolve', 'Api\ResourcePlanningController::resolveGapAnalysis/$1');
         });
     });
-});
+
+    // Operational Performance Management, KPI Framework, Agent Evaluation & Executive Reporting (Prompt 29)
+    $routes->group('performance', static function ($routes) {
+            // KPI Catalog & Categories
+            $routes->get('categories', 'Api\PerformanceManagementController::getCategories');
+            $routes->get('kpis', 'Api\PerformanceManagementController::getKpis');
+            $routes->post('kpis', 'Api\PerformanceManagementController::createKpi');
+            $routes->get('kpis/(:num)', 'Api\PerformanceManagementController::getKpi/$1');
+            $routes->put('kpis/(:num)', 'Api\PerformanceManagementController::updateKpi/$1');
+            $routes->delete('kpis/(:num)', 'Api\PerformanceManagementController::deleteKpi/$1');
+
+            // Metric Calculations
+            $routes->post('kpis/(:num)/calculate', 'Api\PerformanceManagementController::calculateKpi/$1');
+            $routes->post('kpis/calculate-all', 'Api\PerformanceManagementController::calculateAllKpis');
+            $routes->get('kpis/(:num)/results', 'Api\PerformanceManagementController::getKpiResults/$1');
+
+            // Multi-tier Scorecards & Dashboards
+            $routes->get('corporate-scorecard', 'Api\PerformanceManagementController::getCorporateScorecard');
+            $routes->get('operational-pulse', 'Api\PerformanceManagementController::getOperationalPulse');
+            $routes->get('executive-overview', 'Api\PerformanceManagementController::getExecutiveOverview');
+            $routes->get('divisional-comparison', 'Api\PerformanceManagementController::getDivisionalComparison');
+            $routes->get('units/(:num)', 'Api\PerformanceManagementController::getUnitPerformance/$1');
+            $routes->get('project-portfolio', 'Api\PerformanceManagementController::getProjectPortfolio');
+
+            // Agent Evaluations
+            $routes->get('evaluations', 'Api\PerformanceManagementController::getEvaluations');
+            $routes->post('evaluations', 'Api\PerformanceManagementController::createEvaluation');
+            $routes->get('evaluations/(:num)', 'Api\PerformanceManagementController::getEvaluation/$1');
+            $routes->post('evaluations/(:num)/transition', 'Api\PerformanceManagementController::transitionEvaluation/$1');
+            $routes->get('agents/(:num)/profile', 'Api\PerformanceManagementController::getAgentPerformanceProfile/$1');
+            $routes->post('evaluations/(:num)/evidence', 'Api\PerformanceManagementController::addEvidence/$1');
+            $routes->get('evaluations/(:num)/evidence', 'Api\PerformanceManagementController::getEvidence/$1');
+
+            // Core Values Assessments
+            $routes->get('agents/(:num)/core-values', 'Api\PerformanceManagementController::getAgentCoreValues/$1');
+            $routes->post('core-values', 'Api\PerformanceManagementController::assessCoreValue');
+            $routes->get('core-values/summary', 'Api\PerformanceManagementController::getCoreValuesSummary');
+
+            // Workflow Cycles
+            $routes->get('cycles', 'Api\PerformanceManagementController::getCycles');
+            $routes->post('cycles', 'Api\PerformanceManagementController::createCycle');
+            $routes->get('cycles/(:num)', 'Api\PerformanceManagementController::getCycle/$1');
+            $routes->post('cycles/(:num)/transition', 'Api\PerformanceManagementController::transitionCycle/$1');
+            $routes->post('evaluations/(:num)/finalize', 'Api\PerformanceManagementController::finalizeEvaluation/$1');
+
+            // Performance Improvement Plans (PIPs)
+            $routes->get('plans', 'Api\PerformanceManagementController::getPlans');
+            $routes->post('plans', 'Api\PerformanceManagementController::createPlan');
+            $routes->get('plans/(:num)', 'Api\PerformanceManagementController::getPlan/$1');
+            $routes->put('plans/(:num)', 'Api\PerformanceManagementController::updatePlan/$1');
+            $routes->post('plans/(:num)/transition', 'Api\PerformanceManagementController::transitionPlan/$1');
+            $routes->post('plans/(:num)/link-task', 'Api\PerformanceManagementController::linkPlanTask/$1');
+
+            // Welfare Bonuses & DoA
+            $routes->get('bonuses', 'Api\PerformanceManagementController::getBonuses');
+            $routes->post('bonuses/recommend', 'Api\PerformanceManagementController::recommendBonus');
+            $routes->get('bonuses/(:num)', 'Api\PerformanceManagementController::getBonus/$1');
+            $routes->post('bonuses/(:num)/approve', 'Api\PerformanceManagementController::approveBonus/$1');
+            $routes->post('bonuses/(:num)/reject', 'Api\PerformanceManagementController::rejectBonus/$1');
+            $routes->post('bonuses/(:num)/disburse', 'Api\PerformanceManagementController::disburseBonus/$1');
+            $routes->get('agents/(:num)/bonus-eligibility', 'Api\PerformanceManagementController::getBonusEligibility/$1');
+
+            // Executive Reporting
+            $routes->get('reports', 'Api\PerformanceManagementController::getReports');
+            $routes->post('reports/generate', 'Api\PerformanceManagementController::generateReport');
+            $routes->get('reports/(:num)', 'Api\PerformanceManagementController::getReport/$1');
+            $routes->post('reports/(:num)/publish', 'Api\PerformanceManagementController::publishReport/$1');
+            $routes->post('reports/(:num)/ratify', 'Api\PerformanceManagementController::ratifyReport/$1');
+        });
+    });
