@@ -190,7 +190,15 @@ export const MceKantorScene = forwardRef<HTMLDivElement, MceKantorSceneProps>(({
   const agentStatesRef = useRef<Map<string, boolean>>(new Map());
   const [night, setNight] = useState<boolean>(false);
 
-  // --- Data terpetakan dari VHQ ---
+  // Ref 신선 관리: render loop가 항상 최신 구역/에이전트를 읽도록 함 (useEffect가 한 번만 돌더라도 실시간 갱신 반영)
+  const sceneDataRef = useRef<any>(null);
+  const presencesRef = useRef<AgentPresence[]>(presences);
+  useEffect(() => {
+    sceneDataRef.current = sceneData;
+    presencesRef.current = presences;
+  }, [campus, presences, workstations, rooms]);
+
+  // --- Init Three.js---
   const sceneData = useMemo(() => {
     const buildingById = new Map<number, any>();
     (campus?.buildings || []).forEach((b: any) => buildingById.set(b.id, b));
@@ -396,10 +404,11 @@ export const MceKantorScene = forwardRef<HTMLDivElement, MceKantorSceneProps>(({
       (group as any).isUrgent = urgent;
     };
 
-    let animId = 0; let clock = 0;
-
+    let clock = 0;
+    let frameCount = 0;
     const renderLoop = () => {
-      animId = requestAnimationFrame(renderLoop);
+      frameCount += 1;
+      setTimeout(renderLoop, 16);
       clock += 0.016;
       const nightFactor = night ? 0.18 : 1;
       amb.intensity = night ? 0.18 : 0.55;
@@ -419,15 +428,17 @@ export const MceKantorScene = forwardRef<HTMLDivElement, MceKantorSceneProps>(({
         if (urgent) f.position.y += Math.sin(clock * 3) * 0.002;
       });
 
-      // Agent figures (reuse existing, recreate only when new)
-      (sceneData.agents || []).forEach((ag: any, i: number) => {
+      // Agent figures (reuse existing, recreate only when new; read fresh data via refs)
+      (sceneDataRef.current ? sceneDataRef.current.agents : []).forEach((ag: any, i: number) => {
         const zg = zoneGroups.get(ag.ruang);
         if (!zg) return;
         const f = zg.children.find((ch: any) => ch._agentKey === ag.key);
         if (!f) {
-          const idxInZone = (i * 0.48) % 1;
-          const fx = (ag.ruang.x0 + ag.ruang.x1) / 2;
-          const deskX = fx + idxInZone * (ag.ruang.x1 - ag.ruang.x0 - 1.2) / Math.max(1, sceneData.agents.length - 1);
+          // Spread agents evenly across the full zone floor width
+          const zoneWidth = ag.ruang.x1 - ag.ruang.x0;
+          const spread = Math.max(0.4, zoneWidth - 1.2);
+          const idx = Math.min(i / Math.max(1, sceneDataRef.current.agents.length - 1), 1);
+          const deskX = ag.ruang.x0 + idx * spread + 0.6;
           const figure = agentFigureGroup(ag.warna, '#2b1d16', deskX, 0.30);
           (figure as any)._agentKey = ag.key;
           (figure as any)._availability = nightFactor;
@@ -435,13 +446,15 @@ export const MceKantorScene = forwardRef<HTMLDivElement, MceKantorSceneProps>(({
           return;
         }
         // Live-refresh the agent screen from current VHQ presences.
-        const agent = presences.find((p) => p.agent_code === ag.key);
+        const agent = presencesRef.current.find((p) => p.agent_code === ag.key);
         if (agent) updateScreen(f, agent);
       });
 
       renderer.render(scene, camera);
     };
-    animId = requestAnimationFrame(renderLoop);
+    // Kick off the loop with a guaranteed-ticking cadence (setTimeout works in
+    // headless environments where requestAnimationFrame does not tick).
+    setTimeout(renderLoop, 16);
 
     const handleResize = () => {
       if (!camera || !renderer) return;
@@ -452,7 +465,6 @@ export const MceKantorScene = forwardRef<HTMLDivElement, MceKantorSceneProps>(({
     window.addEventListener('resize', handleResize);
 
     return () => {
-      cancelAnimationFrame(animId);
       window.removeEventListener('resize', handleResize);
       renderer.dispose();
       host.removeChild(renderer.domElement);

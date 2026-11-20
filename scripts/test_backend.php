@@ -1163,7 +1163,371 @@ $ok = ($code === 200) && isset($json['data']['context_chunks']) && isset($json['
 reportTest('POST', '/knowledge/rag/retrieve', 200, $code, 'AI RAG Context Retrieval with Authorization & Provenance', $ok, $pass, $total);
 
 // -----------------------------------------------------------------------------
-// 14. Token Revocation
+// 14. Internal Communication, Executive Coordination & Meetings (Prompt 26)
+// -----------------------------------------------------------------------------
+
+// 1. Executive Coordination Overview
+[$code, $json] = requestHttp($baseUrl . '/collaboration/executive/overview', 'GET', null, $authToken);
+$ok = ($code === 200) && isset($json['data']['metrics']['active_directives']) && is_array($json['data']['recent_directives']);
+reportTest('GET', '/collaboration/executive/overview', 200, $code, 'Retrieve Executive Coordination Overview & DoA Compliance Metrics', $ok, $pass, $total);
+
+// 2. List Owner Directives
+[$code, $json] = requestHttp($baseUrl . '/collaboration/executive/directives', 'GET', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/collaboration/executive/directives', 200, $code, 'List Owner Strategic Directives & Advisory Guidance', $ok, $pass, $total);
+
+// 3. Issue New Strategic Directive (Human Owner)
+$dirCode = 'DIR-E2E-' . rand(1000, 9999);
+[$code, $json] = requestHttp($baseUrl . '/collaboration/executive/directives', 'POST', [
+    'direction_code'          => $dirCode,
+    'direction_type'          => 'strategic_instruction',
+    'subject'                 => 'Operational Synchronization on Multi-Agent Task Delegation',
+    'description'             => 'Continuous Executive Board is instructed to enforce DoA Level B/C boundaries for all operational tasks.',
+    'requires_acknowledgment' => 1,
+    'due_date'                => date('Y-m-d', strtotime('+7 days')),
+], $authToken);
+$testDirId = $json['data']['id'] ?? null;
+$ok = ($code === 201) && (($json['data']['direction_code'] ?? '') === $dirCode);
+reportTest('POST', '/collaboration/executive/directives', 201, $code, 'Issue Strategic Instruction Directive with Delegated Authority Scope', $ok, $pass, $total);
+
+// 4. Retrieve Directive Detail
+if ($testDirId) {
+    [$code, $json] = requestHttp($baseUrl . "/collaboration/executive/directives/{$testDirId}", 'GET', null, $authToken);
+    $ok = ($code === 200) && (($json['data']['id'] ?? null) == $testDirId);
+    reportTest('GET', "/collaboration/executive/directives/{$testDirId}", 200, $code, 'Retrieve Strategic Directive Details & Ack Join', $ok, $pass, $total);
+
+    // 5. Acknowledge Directive by Agent
+    [$code, $json] = requestHttp($baseUrl . "/collaboration/executive/directives/{$testDirId}/acknowledge", 'POST', [
+        'actor_type' => 'agent',
+        'agent_id'   => 1,
+        'status'     => 'in_execution',
+        'notes'      => 'Director AI acknowledged directive and initiated board strategy sync.',
+    ], $authToken);
+    $ok = ($code === 200) && (($json['data']['status'] ?? '') === 'in_execution');
+    reportTest('POST', "/collaboration/executive/directives/{$testDirId}/acknowledge", 200, $code, 'Record Formal Directive Acknowledgement & Execution Status', $ok, $pass, $total);
+}
+
+// 6. List Executive Decisions
+[$code, $json] = requestHttp($baseUrl . '/collaboration/executive/decisions', 'GET', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/collaboration/executive/decisions', 200, $code, 'List Continuous Executive Board Decisions (DoA Level B/C)', $ok, $pass, $total);
+
+// 7. Propose Executive Decision
+$decCode = 'DEC-E2E-' . rand(1000, 9999);
+[$code, $json] = requestHttp($baseUrl . '/collaboration/executive/decisions', 'POST', [
+    'decision_code'     => $decCode,
+    'title'             => 'Ratification of Enterprise Collaboration Protocol v1.0',
+    'summary'           => 'Board agreement to standardize channel hierarchy, meeting MoM workflows, and anti-impersonation guardrails.',
+    'decision_category' => 'operational',
+    'decision_level'    => 'B',
+    'status'            => 'ratified',
+], $authToken);
+$ok = ($code === 201) && (($json['data']['decision_code'] ?? '') === $decCode);
+reportTest('POST', '/collaboration/executive/decisions', 201, $code, 'Record Continuous Executive Board Ratified Decision Proposal', $ok, $pass, $total);
+
+// 8. List Organizational Channels
+[$code, $json] = requestHttp($baseUrl . '/collaboration/channels', 'GET', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 4;
+reportTest('GET', '/collaboration/channels', 200, $code, 'List Organizational Channels by Governance Domain & Privacy', $ok, $pass, $total);
+
+// 9. Create New Organizational Channel
+$chnCode = 'CHN-TEST-' . rand(100, 999);
+[$code, $json] = requestHttp($baseUrl . '/collaboration/channels', 'POST', [
+    'channel_code'   => $chnCode,
+    'name'           => 'Architecture Integration Pod',
+    'description'    => 'Dedicated cross-division channel for integration verification and operational sync.',
+    'domain'         => 'technical',
+    'classification' => 'internal',
+    'is_private'     => 0,
+], $authToken);
+$testChannelId = $json['data']['id'] ?? null;
+$ok = ($code === 201) && (($json['data']['channel_code'] ?? '') === $chnCode);
+reportTest('POST', '/collaboration/channels', 201, $code, 'Create New Domain Organizational Channel with Role Hierarchy', $ok, $pass, $total);
+
+// 10. Get Channel Detail
+if ($testChannelId) {
+    [$code, $json] = requestHttp($baseUrl . "/collaboration/channels/{$testChannelId}", 'GET', null, $authToken);
+    $ok = ($code === 200) && (($json['data']['id'] ?? null) == $testChannelId) && is_array($json['data']['members']);
+    reportTest('GET', "/collaboration/channels/{$testChannelId}", 200, $code, 'Retrieve Channel Metadata & Active Membership Roster', $ok, $pass, $total);
+
+    // 11. Join Channel as Agent
+    [$code, $json] = requestHttp($baseUrl . "/collaboration/channels/{$testChannelId}/join", 'POST', [
+        'member_type' => 'agent',
+        'agent_id'    => 2,
+        'role'        => 'moderator',
+    ], $authToken);
+    $ok = ($code === 200) && (($json['data']['joined'] ?? false) === true);
+    reportTest('POST', "/collaboration/channels/{$testChannelId}/join", 200, $code, 'Join AI Agent to Organizational Channel with Moderator Role', $ok, $pass, $total);
+
+    // 12. Post Message to Channel (with Anti-Impersonation Validation)
+    [$code, $json] = requestHttp($baseUrl . "/collaboration/channels/{$testChannelId}/messages", 'POST', [
+        'sender_type'         => 'human',
+        'content'             => 'Architecture review channel initialized. Team please report readiness.',
+        'content_format'      => 'markdown',
+        'sender_display_name' => 'Human Owner',
+    ], $authToken);
+    $testMsgId = $json['data']['id'] ?? null;
+    $ok = ($code === 201) && !empty($json['data']['message_code']);
+    reportTest('POST', "/collaboration/channels/{$testChannelId}/messages", 201, $code, 'Transmit Message to Channel with Sender Identity Verification', $ok, $pass, $total);
+
+    // 13. Get Channel Messages
+    [$code, $json] = requestHttp($baseUrl . "/collaboration/channels/{$testChannelId}/messages", 'GET', null, $authToken);
+    $ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+    reportTest('GET', "/collaboration/channels/{$testChannelId}/messages", 200, $code, 'Retrieve Channel Message Stream with Sender Metadata', $ok, $pass, $total);
+
+    // 14. Leave Channel
+    [$code, $json] = requestHttp($baseUrl . "/collaboration/channels/{$testChannelId}/leave", 'POST', [
+        'member_type' => 'agent',
+        'agent_id'    => 2,
+    ], $authToken);
+    $ok = ($code === 200) && (($json['data']['left'] ?? false) === true);
+    reportTest('POST', "/collaboration/channels/{$testChannelId}/leave", 200, $code, 'Remove Agent from Organizational Channel', $ok, $pass, $total);
+}
+
+// 15. List Direct Conversations
+[$code, $json] = requestHttp($baseUrl . '/collaboration/conversations', 'GET', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/collaboration/conversations', 200, $code, 'List Direct & Executive Session Conversations', $ok, $pass, $total);
+
+// 16. Create Direct Conversation
+$convCode = 'CONV-E2E-' . rand(100, 999);
+[$code, $json] = requestHttp($baseUrl . '/collaboration/conversations', 'POST', [
+    'conversation_code' => $convCode,
+    'type'              => 'direct',
+    'title'             => 'Human Owner & Tech Lead Direct Line',
+    'classification'    => 'confidential',
+    'participants'      => [
+        ['participant_type' => 'agent', 'agent_id' => 2, 'role' => 'member']
+    ],
+], $authToken);
+$testConvId = $json['data']['id'] ?? null;
+$ok = ($code === 201) && (($json['data']['conversation_code'] ?? '') === $convCode);
+reportTest('POST', '/collaboration/conversations', 201, $code, 'Establish Direct 1-on-1 Confidential Human-Agent Conversation', $ok, $pass, $total);
+
+// 17. Get Conversation Detail
+if ($testConvId) {
+    [$code, $json] = requestHttp($baseUrl . "/collaboration/conversations/{$testConvId}", 'GET', null, $authToken);
+    $ok = ($code === 200) && (($json['data']['id'] ?? null) == $testConvId) && count($json['data']['participants']) >= 2;
+    reportTest('GET', "/collaboration/conversations/{$testConvId}", 200, $code, 'Retrieve Conversation Participants & Privacy Level', $ok, $pass, $total);
+
+    // 18. Send Direct Message
+    [$code, $json] = requestHttp($baseUrl . "/collaboration/conversations/{$testConvId}/messages", 'POST', [
+        'sender_type'         => 'human',
+        'content'             => 'Tech Lead, verify readiness of 9Router Gateway failover.',
+        'content_format'      => 'text',
+        'sender_display_name' => 'Human Owner',
+    ], $authToken);
+    $directMsgId = $json['data']['id'] ?? null;
+    $ok = ($code === 201) && !empty($json['data']['id']);
+    reportTest('POST', "/collaboration/conversations/{$testConvId}/messages", 201, $code, 'Send Confidential 1-on-1 Message Between Human & Agent', $ok, $pass, $total);
+
+    // 19. Get Direct Messages
+    [$code, $json] = requestHttp($baseUrl . "/collaboration/conversations/{$testConvId}/messages", 'GET', null, $authToken);
+    $ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+    reportTest('GET', "/collaboration/conversations/{$testConvId}/messages", 200, $code, 'Retrieve Conversation Message Thread', $ok, $pass, $total);
+
+    // 20. Pin Message
+    if ($directMsgId) {
+        [$code, $json] = requestHttp($baseUrl . "/collaboration/messages/{$directMsgId}/pin", 'POST', [
+            'is_pinned' => true,
+        ], $authToken);
+        $ok = ($code === 200) && (($json['data']['pinned'] ?? false) === true);
+        reportTest('POST', "/collaboration/messages/{$directMsgId}/pin", 200, $code, 'Pin Critical Message to Conversation Stream', $ok, $pass, $total);
+    }
+
+    // 21. Mark Messages as Read
+    [$code, $json] = requestHttp($baseUrl . '/collaboration/messages/read', 'POST', [
+        'target_type'     => 'conversation',
+        'target_id'       => $testConvId,
+        'last_message_id' => $directMsgId ?: 1,
+    ], $authToken);
+    $ok = ($code === 200) && (($json['data']['read'] ?? false) === true);
+    reportTest('POST', '/collaboration/messages/read', 200, $code, 'Acknowledge Delivery & Mark Direct Messages Read', $ok, $pass, $total);
+}
+
+// 22. List Announcements
+[$code, $json] = requestHttp($baseUrl . '/collaboration/announcements', 'GET', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/collaboration/announcements', 200, $code, 'List Official Organization Announcements Catalog', $ok, $pass, $total);
+
+// 23. Publish Official Announcement
+$annCode = 'ANN-E2E-' . rand(100, 999);
+[$code, $json] = requestHttp($baseUrl . '/collaboration/announcements', 'POST', [
+    'announcement_code' => $annCode,
+    'title'             => 'Scheduled Platform Performance Optimization Window',
+    'content'           => 'Notice to all workforce units: Database cache re-indexing is scheduled tonight at 23:00 UTC.',
+    'target_scope'      => 'all_organization',
+    'priority'          => 'important',
+    'classification'    => 'internal',
+], $authToken);
+$testAnnId = $json['data']['id'] ?? null;
+$ok = ($code === 201) && (($json['data']['announcement_code'] ?? '') === $annCode);
+reportTest('POST', '/collaboration/announcements', 201, $code, 'Publish Scoped Organization Announcement with Priority Badge', $ok, $pass, $total);
+
+// 24. Get Announcement Detail
+if ($testAnnId) {
+    [$code, $json] = requestHttp($baseUrl . "/collaboration/announcements/{$testAnnId}", 'GET', null, $authToken);
+    $ok = ($code === 200) && (($json['data']['id'] ?? null) == $testAnnId);
+    reportTest('GET', "/collaboration/announcements/{$testAnnId}", 200, $code, 'Retrieve Published Announcement Details', $ok, $pass, $total);
+
+    // 25. Update Announcement
+    [$code, $json] = requestHttp($baseUrl . "/collaboration/announcements/{$testAnnId}", 'PUT', [
+        'priority' => 'critical',
+    ], $authToken);
+    $ok = ($code === 200) && (($json['data']['priority'] ?? '') === 'critical');
+    reportTest('PUT', "/collaboration/announcements/{$testAnnId}", 200, $code, 'Update Announcement Priority to Critical Level', $ok, $pass, $total);
+
+    // 26. Delete Announcement
+    [$code, $json] = requestHttp($baseUrl . "/collaboration/announcements/{$testAnnId}", 'DELETE', null, $authToken);
+    $ok = ($code === 200) && (($json['data']['deleted'] ?? false) === true);
+    reportTest('DELETE', "/collaboration/announcements/{$testAnnId}", 200, $code, 'Retire & Remove Expired Official Announcement', $ok, $pass, $total);
+}
+
+// 27. List Meetings
+[$code, $json] = requestHttp($baseUrl . '/collaboration/meetings', 'GET', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/collaboration/meetings', 200, $code, 'List Scheduled Meetings Bound to Spatial VHQ Rooms', $ok, $pass, $total);
+
+// 28. Schedule Formal Meeting
+$mtgCode = 'MTG-E2E-' . rand(100, 999);
+[$code, $json] = requestHttp($baseUrl . '/collaboration/meetings', 'POST', [
+    'meeting_code'         => $mtgCode,
+    'title'                => 'E2E Architecture & Governance Review Session',
+    'category'             => 'executive_coordination',
+    'classification'       => 'internal',
+    'room_id'              => 3, // ROOM-MAIN-BOARD
+    'scheduled_start_time' => date('Y-m-d 15:00:00', strtotime('+1 day')),
+    'scheduled_end_time'   => date('Y-m-d 16:30:00', strtotime('+1 day')),
+    'description'          => 'Formal coordination between Human Owner, Director AI, and Tech Lead.',
+    'agendas'              => [
+        ['item_order' => 1, 'title' => 'DoA Level B/C Review', 'allocated_minutes' => 30],
+        ['item_order' => 2, 'title' => 'Collaboration Module Verification', 'allocated_minutes' => 45],
+    ],
+    'participants'         => [
+        ['participant_type' => 'agent', 'agent_id' => 1, 'role' => 'secretary'],
+        ['participant_type' => 'agent', 'agent_id' => 2, 'role' => 'participant'],
+    ],
+], $authToken);
+$testMtgId = $json['data']['id'] ?? null;
+$ok = ($code === 201) && (($json['data']['meeting_code'] ?? '') === $mtgCode);
+reportTest('POST', '/collaboration/meetings', 201, $code, 'Schedule Meeting with Spatial VHQ Room Binding, Agendas & Roster', $ok, $pass, $total);
+
+// 29. Get Meeting Details
+if ($testMtgId) {
+    [$code, $json] = requestHttp($baseUrl . "/collaboration/meetings/{$testMtgId}", 'GET', null, $authToken);
+    $ok = ($code === 200) && (($json['data']['id'] ?? null) == $testMtgId) && count($json['data']['agendas']) >= 2;
+    reportTest('GET', "/collaboration/meetings/{$testMtgId}", 200, $code, 'Retrieve Meeting Details with Agendas, Participants & Room', $ok, $pass, $total);
+
+    // 30. Transition Meeting Status to In-Progress
+    [$code, $json] = requestHttp($baseUrl . "/collaboration/meetings/{$testMtgId}/status", 'PATCH', [
+        'status' => 'in_progress',
+    ], $authToken);
+    $ok = ($code === 200) && (($json['data']['status'] ?? '') === 'in_progress');
+    reportTest('PATCH', "/collaboration/meetings/{$testMtgId}/status", 200, $code, 'Transition Meeting Status to In-Progress with Actual Start Timestamp', $ok, $pass, $total);
+
+    // 31. Add Agenda Item
+    [$code, $json] = requestHttp($baseUrl . "/collaboration/meetings/{$testMtgId}/agendas", 'POST', [
+        'title'             => 'Action Items Assignment & Synthesis',
+        'allocated_minutes' => 15,
+        'presenter_name'    => 'Director AI',
+    ], $authToken);
+    $ok = ($code === 201) && !empty($json['data']['id']);
+    reportTest('POST', "/collaboration/meetings/{$testMtgId}/agendas", 201, $code, 'Append Dynamic Agenda Item to Scheduled Meeting', $ok, $pass, $total);
+
+    // 32. Add Meeting Participant
+    [$code, $json] = requestHttp($baseUrl . "/collaboration/meetings/{$testMtgId}/participants", 'POST', [
+        'participant_type' => 'agent',
+        'agent_id'         => 3,
+        'role'             => 'observer',
+    ], $authToken);
+    $addedPartId = $json['data']['id'] ?? null;
+    $ok = ($code === 201) && !empty($json['data']['id']);
+    reportTest('POST', "/collaboration/meetings/{$testMtgId}/participants", 201, $code, 'Add Additional AI Agent Observer to Meeting Roster', $ok, $pass, $total);
+
+    // 33. Record Participant Attendance
+    if ($addedPartId) {
+        [$code, $json] = requestHttp($baseUrl . "/collaboration/meetings/{$testMtgId}/participants/{$addedPartId}", 'PATCH', [
+            'attendance_status' => 'attended',
+            'notes'             => 'Joined via remote VHQ presence point.',
+        ], $authToken);
+        $ok = ($code === 200) && (($json['data']['updated'] ?? false) === true);
+        reportTest('PATCH', "/collaboration/meetings/{$testMtgId}/participants/{$addedPartId}", 200, $code, 'Record Participant Roll Call & Attendance Status', $ok, $pass, $total);
+    }
+
+    // 34. Save Minutes of Meeting (MoM)
+    [$code, $json] = requestHttp($baseUrl . "/collaboration/meetings/{$testMtgId}/minutes", 'POST', [
+        'attendance_summary' => 'Human Owner (Chair), Director AI (Secretary), Tech Lead AI (Participant)',
+        'discussion_notes'   => 'Reviewed full end-to-end integration and approved Prompt 26 deliverables.',
+        'formal_decisions'   => '1. Mandated full deployment of internal communication system.\n2. Scheduled Prompt 27 transition.',
+    ], $authToken);
+    $ok = ($code === 200) && (($json['data']['is_approved'] ?? 1) == 0);
+    reportTest('POST', "/collaboration/meetings/{$testMtgId}/minutes", 200, $code, 'Draft Formal Minutes of Meeting (MoM) with Decisions', $ok, $pass, $total);
+
+    // 35. Formally Approve MoM (Executive / Owner Authority)
+    [$code, $json] = requestHttp($baseUrl . "/collaboration/meetings/{$testMtgId}/minutes/approve", 'POST', null, $authToken);
+    $ok = ($code === 200) && (($json['data']['is_approved'] ?? 0) == 1);
+    reportTest('POST', "/collaboration/meetings/{$testMtgId}/minutes/approve", 200, $code, 'Formally Ratify Minutes of Meeting & Finalize Status', $ok, $pass, $total);
+
+    // 36. Get Meeting Minutes Detail
+    [$code, $json] = requestHttp($baseUrl . "/collaboration/meetings/{$testMtgId}/minutes", 'GET', null, $authToken);
+    $ok = ($code === 200) && (($json['data']['is_approved'] ?? 0) == 1);
+    reportTest('GET', "/collaboration/meetings/{$testMtgId}/minutes", 200, $code, 'Retrieve Ratified Minutes of Meeting (MoM) Record', $ok, $pass, $total);
+
+    // 37. Create Action Item Synced to Workforce Tasks
+    [$code, $json] = requestHttp($baseUrl . "/collaboration/meetings/{$testMtgId}/action-items", 'POST', [
+        'description'   => 'Complete E2E integration test verification for Section 14',
+        'assignee_type' => 'agent',
+        'assignee_id'   => 2,
+        'due_date'      => date('Y-m-d', strtotime('+3 days')),
+        'sync_to_task'  => true,
+    ], $authToken);
+    $testAiId = $json['data']['id'] ?? null;
+    $ok = ($code === 201) && !empty($json['data']['task_id']);
+    reportTest('POST', "/collaboration/meetings/{$testMtgId}/action-items", 201, $code, 'Generate Action Item with Bi-Directional workforce_tasks Bridge', $ok, $pass, $total);
+
+    // 38. Update Action Item Status
+    if ($testAiId) {
+        [$code, $json] = requestHttp($baseUrl . "/collaboration/action-items/{$testAiId}", 'PATCH', [
+            'status' => 'completed',
+        ], $authToken);
+        $ok = ($code === 200) && (($json['data']['status'] ?? '') === 'completed');
+        reportTest('PATCH', "/collaboration/action-items/{$testAiId}", 200, $code, 'Update Action Item Lifecycle to Completed Status', $ok, $pass, $total);
+    }
+}
+
+// 39. List All Action Items
+[$code, $json] = requestHttp($baseUrl . '/collaboration/action-items', 'GET', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/collaboration/action-items', 200, $code, 'List Global Meeting Action Items with Task Links', $ok, $pass, $total);
+
+// 40. List In-App Notifications
+[$code, $json] = requestHttp($baseUrl . '/collaboration/notifications', 'GET', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/collaboration/notifications', 200, $code, 'List In-App Notifications Inbox with Priority Levels', $ok, $pass, $total);
+
+// 41. Get Unread Notification Count
+[$code, $json] = requestHttp($baseUrl . '/collaboration/notifications/unread-count', 'GET', null, $authToken);
+$ok = ($code === 200) && isset($json['data']['unread_count']);
+reportTest('GET', '/collaboration/notifications/unread-count', 200, $code, 'Retrieve Real-Time Unread Notification Badge Count', $ok, $pass, $total);
+
+// 42. Mark Notification as Read
+$firstNotifId = $json['data']['unread_count'] > 0 ? 1 : null;
+[$code, $json] = requestHttp($baseUrl . '/collaboration/notifications/1/read', 'POST', null, $authToken);
+$ok = ($code === 200) && (($json['data']['read'] ?? false) === true);
+reportTest('POST', '/collaboration/notifications/1/read', 200, $code, 'Mark Single Notification as Read', $ok, $pass, $total);
+
+// 43. Mark All Notifications as Read
+[$code, $json] = requestHttp($baseUrl . '/collaboration/notifications/read-all', 'POST', null, $authToken);
+$ok = ($code === 200) && (($json['data']['all_read'] ?? false) === true);
+reportTest('POST', '/collaboration/notifications/read-all', 200, $code, 'Mark All User Notifications as Read', $ok, $pass, $total);
+
+// 44. Unified Collaboration Search
+[$code, $json] = requestHttp($baseUrl . '/collaboration/search?q=Board', 'GET', null, $authToken);
+$ok = ($code === 200) && isset($json['data']['total_results']) && ($json['data']['total_results'] >= 1);
+reportTest('GET', '/collaboration/search?q=Board', 200, $code, 'Perform Unified Multi-Entity Cross-Domain Collaboration Search', $ok, $pass, $total);
+
+// -----------------------------------------------------------------------------
+// 15. Token Revocation
 // -----------------------------------------------------------------------------
 [$code, $json] = requestHttp($baseUrl . '/auth/logout', 'POST', null, $authToken);
 $ok = ($code === 200) && (($json['data']['revoked'] ?? false) === true);

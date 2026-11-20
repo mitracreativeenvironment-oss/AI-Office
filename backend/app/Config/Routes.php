@@ -324,4 +324,55 @@ $routes->group('api/v1', static function ($routes) {
             $routes->post('rag/retrieve', 'Api\KnowledgeController::ragRetrieve');
         });
     });
+
+    // Internal Communication, Executive Coordination & Meetings (Prompt 26)
+    $routes->group('collaboration', static function ($routes) {
+        $routes->get('executive/overview', 'Api\CollaborationController::executiveOverview');
+        $routes->get('executive/directives', 'Api\CollaborationController::listDirectives');
+        $routes->get('executive/directives/(:num)', 'Api\CollaborationController::getDirective/$1');
+        $routes->get('executive/decisions', 'Api\CollaborationController::listDecisions');
+        $routes->get('channels', 'Api\CollaborationController::listChannels');
+        $routes->get('channels/(:num)', 'Api\CollaborationController::getChannel/$1');
+        $routes->get('channels/(:num)/messages', 'Api\CollaborationController::getChannelMessages/$1');
+        $routes->get('announcements', 'Api\CollaborationController::listAnnouncements');
+        $routes->get('announcements/(:num)', 'Api\CollaborationController::getAnnouncement/$1');
+        $routes->get('meetings', 'Api\CollaborationController::listMeetings');
+        $routes->get('meetings/(:num)', 'Api\CollaborationController::getMeeting/$1');
+        $routes->get('meetings/(:num)/minutes', 'Api\CollaborationController::getMeetingMinutes/$1');
+        $routes->get('action-items', 'Api\CollaborationController::listActionItems');
+        $routes->get('search', 'Api\CollaborationController::searchCollaboration');
+
+        $routes->group('', ['filter' => 'mce_auth'], static function ($routes) {
+            $routes->post('executive/directives', 'Api\CollaborationController::createDirective');
+            $routes->post('executive/directives/(:num)/acknowledge', 'Api\CollaborationController::acknowledgeDirective/$1');
+            $routes->post('executive/decisions', 'Api\CollaborationController::createDecisionProposal');
+            $routes->post('channels', 'Api\CollaborationController::createChannel');
+            $routes->post('channels/(:num)/join', 'Api\CollaborationController::joinChannel/$1');
+            $routes->post('channels/(:num)/leave', 'Api\CollaborationController::leaveChannel/$1');
+            $routes->post('channels/(:num)/messages', 'Api\CollaborationController::sendChannelMessage/$1');
+            $routes->get('conversations', 'Api\CollaborationController::listConversations');
+            $routes->get('conversations/(:num)', 'Api\CollaborationController::getConversation/$1');
+            $routes->post('conversations', 'Api\CollaborationController::createConversation');
+            $routes->get('conversations/(:num)/messages', 'Api\CollaborationController::getConversationMessages/$1');
+            $routes->post('conversations/(:num)/messages', 'Api\CollaborationController::sendConversationMessage/$1');
+            $routes->post('messages/(:num)/pin', 'Api\CollaborationController::pinMessage/$1');
+            $routes->post('messages/read', 'Api\CollaborationController::markMessagesRead');
+            $routes->post('announcements', 'Api\CollaborationController::createAnnouncement');
+            $routes->put('announcements/(:num)', 'Api\CollaborationController::updateAnnouncement/$1');
+            $routes->delete('announcements/(:num)', 'Api\CollaborationController::deleteAnnouncement/$1');
+            $routes->post('meetings', 'Api\CollaborationController::createMeeting');
+            $routes->patch('meetings/(:num)/status', 'Api\CollaborationController::updateMeetingStatus/$1');
+            $routes->post('meetings/(:num)/participants', 'Api\CollaborationController::addParticipant/$1');
+            $routes->patch('meetings/(:num)/participants/(:num)', 'Api\CollaborationController::updateParticipantAttendance/$1/$2');
+            $routes->post('meetings/(:num)/agendas', 'Api\CollaborationController::addAgendaItem/$1');
+            $routes->post('meetings/(:num)/minutes', 'Api\CollaborationController::saveMeetingMinutes/$1');
+            $routes->post('meetings/(:num)/minutes/approve', 'Api\CollaborationController::approveMeetingMinutes/$1');
+            $routes->post('meetings/(:num)/action-items', 'Api\CollaborationController::createActionItem/$1');
+            $routes->patch('action-items/(:num)', 'Api\CollaborationController::updateActionItemStatus/$1');
+            $routes->get('notifications', 'Api\CollaborationController::listNotifications');
+            $routes->get('notifications/unread-count', 'Api\CollaborationController::getUnreadCount');
+            $routes->post('notifications/(:num)/read', 'Api\CollaborationController::markNotificationRead/$1');
+            $routes->post('notifications/read-all', 'Api\CollaborationController::markAllNotificationsRead');
+        });
+    });
 });

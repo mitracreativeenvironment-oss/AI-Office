@@ -6,28 +6,31 @@ import { LoginPage } from './components/LoginPage';
 import { RuntimeManagementView } from './components/RuntimeManagementView';
 import { WelfareManagementView } from './components/WelfareManagementView';
 import { KnowledgeManagementView } from './components/KnowledgeManagementView';
+import { CollaborationView } from './components/CollaborationView';
 import { apiClient } from './services/apiClient';
 import { authService } from './services/authService';
 import type { User } from './types/auth';
 
 export default function App() {
-  const getInitialView = (): 'dashboard' | 'vhq' | 'runtime' | 'welfare' | 'knowledge' => {
+  const getInitialView = (): 'dashboard' | 'vhq' | 'runtime' | 'welfare' | 'knowledge' | 'collaboration' => {
     const hash = window.location.hash.toLowerCase();
     if (hash === '#vhq' || hash === '#/vhq') return 'vhq';
     if (hash === '#dashboard' || hash === '#/dashboard') return 'dashboard';
     if (hash === '#runtime' || hash === '#/runtime') return 'runtime';
     if (hash === '#welfare' || hash === '#/welfare') return 'welfare';
     if (hash === '#knowledge' || hash === '#/knowledge') return 'knowledge';
+    if (hash === '#collaboration' || hash === '#/collaboration') return 'collaboration';
     const params = new URLSearchParams(window.location.search);
     const viewParam = params.get('view');
     if (viewParam === 'vhq') return 'vhq';
     if (viewParam === 'runtime') return 'runtime';
     if (viewParam === 'welfare') return 'welfare';
     if (viewParam === 'knowledge') return 'knowledge';
+    if (viewParam === 'collaboration') return 'collaboration';
     return 'dashboard';
   };
 
-  const [currentView, setCurrentView] = useState<'dashboard' | 'vhq' | 'runtime' | 'welfare' | 'knowledge'>(getInitialView);
+  const [currentView, setCurrentView] = useState<'dashboard' | 'vhq' | 'runtime' | 'welfare' | 'knowledge' | 'collaboration'>(getInitialView);
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'degraded' | 'offline'>('checking');
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
 
@@ -76,7 +79,7 @@ export default function App() {
     return () => clearInterval(timer);
   }, [checkConnectivity, restoreSession]);
 
-  const handleNavigate = (view: 'dashboard' | 'vhq' | 'runtime' | 'welfare' | 'knowledge') => {
+  const handleNavigate = (view: 'dashboard' | 'vhq' | 'runtime' | 'welfare' | 'knowledge' | 'collaboration') => {
     setCurrentView(view);
     window.location.hash = `#${view}`;
   };
@@ -124,8 +127,13 @@ export default function App() {
             isAuthenticated={!!currentUser}
             onOpenLogin={() => setIsLoginOpen(true)}
           />
-        ) : (
+        ) : currentView === 'knowledge' ? (
           <KnowledgeManagementView
+            isAuthenticated={!!currentUser}
+            onOpenLogin={() => setIsLoginOpen(true)}
+          />
+        ) : (
+          <CollaborationView
             isAuthenticated={!!currentUser}
             onOpenLogin={() => setIsLoginOpen(true)}
           />

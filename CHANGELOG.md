@@ -6,6 +6,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.11.0] - 2026-11-20 — Internal Communication, Executive Coordination, Meetings & Organizational Collaboration Milestone (Prompt 26)
+
+### Added
+- **Database Schema Batch 11 (`CreateInternalCollaborationAndMeetingsSchema.php`)**:
+  - Implemented 15 relational tables: `collaboration_conversations`, `collaboration_conversation_participants`, `collaboration_channels`, `collaboration_channel_members`, `collaboration_messages`, `collaboration_message_references`, `collaboration_announcements`, `collaboration_meetings`, `collaboration_meeting_participants`, `collaboration_meeting_agendas`, `collaboration_meeting_minutes`, `collaboration_meeting_action_items`, `collaboration_directive_acknowledgements`, `collaboration_notifications`, `collaboration_audit_events`.
+  - Added message threading (`parent_message_id`), pinning (`is_pinned`), read tracking, and polymorphic cross-linking to tasks, documents, knowledge records, and meetings.
+  - Added spatial room binding to Virtual Headquarters (`hq_rooms.id`).
+  - Added formal Minutes of Meeting (MoM) approval workflow and automated bi-directional action item synchronization with `workforce_tasks`.
+- **Database Seeder (`CollaborationSeeder.php`)**:
+  - Seeded 5 operational and executive channels (`#CHN-EXEC-BOARD`, `#CHN-CORP-OPS`, `#CHN-DIV-TECH`, `#CHN-ANNOUNCEMENTS`, `#CHN-ALERTS`).
+  - Seeded channel memberships, 2 conversations, initial threaded messages, 2 broadcast announcements, and 2 formal meetings.
+  - Seeded initial MoM with Human Owner ratification, action items linked to tasks, and in-app notifications.
+- **Backend Domain Services**:
+  - `CollaborationAccessService.php`: 5-tier classification matrix enforcement and strict anti-impersonation sender identity validation.
+  - `MessagingService.php`: Channel management, conversation streams, threaded replies, message references, and read receipts.
+  - `AnnouncementService.php`: Broadcast announcements, audience scoping, priority filtering.
+  - `ExecutiveCoordinationService.php`: Distinction between advisory guidance and binding directives, acknowledgement tracking, board decision proposals.
+  - `MeetingManagementService.php`: 8-state meeting lifecycle, VHQ room bindings, agendas, attendance, MoM approval workflow, action items to task bridge.
+  - `CollaborationNotificationService.php`: Real-time notification center, unread counters, delivery tracking.
+  - `CollaborationSearchService.php`: Unified cross-domain multi-entity search.
+- **REST API Controller & Routes**:
+  - `CollaborationController.php`: 28 REST API endpoints under `/api/v1/collaboration/*` with standardized envelopes and auth filters.
+- **Frontend Integration**:
+  - `collaboration.ts`: Complete TypeScript types and interfaces.
+  - `collaborationService.ts`: API client service for all 28 endpoints.
+  - `CollaborationView.tsx`: Enterprise collaboration view with 8 operational tabs (Executive Board Deliberation, Organizational Channels, Direct Messages, Official Announcements, Meetings & MoM, Strategic Directives, Action Items, Search & Notifications).
+  - Mounted in `NavigationHeader.tsx`, `App.tsx`, and `DashboardShell.tsx`.
+- **Testing & Quality Assurance**:
+  - `CollaborationTest.php`: 12 PHPUnit tests, 87 assertions passing 100% (99 total backend tests, 686 assertions passing 100%).
+  - `scripts/test_backend.php`: Section 14 added, 201/201 REST integration endpoints passing 100%.
+  - `npm --prefix frontend run build`: Clean production compilation with Vite (0 errors).
+- **Documentation**:
+  - Created `docs/architecture/INTERNAL-COMMUNICATION-ARCHITECTURE.md`.
+  - Created `docs/architecture/MESSAGING-DATA-MODEL.md`.
+  - Created `docs/architecture/EXECUTIVE-COORDINATION-WORKFLOW.md`.
+  - Created `docs/architecture/MEETING-MANAGEMENT-MoM.md`.
+  - Created `docs/architecture/NOTIFICATION-SYSTEM-ARCHITECTURE.md`.
+  - Created `docs/operations/COLLABORATION-OPERATIONS.md`.
+  - Created `docs/api/COLLABORATION-API.md`.
+  - Created `docs/implementation/COLLABORATION-IMPLEMENTATION.md`.
+
 ## [0.10.0] - 2026-11-20 — Knowledge Management, Organizational Memory, Wallbook & Agent Knowledge Sharing Milestone (Prompt 25)
 
 ### Added
