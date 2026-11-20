@@ -6,6 +6,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.12.0] - 2026-11-21 — Project Management, Client Engagement, Project Lifecycle & Delivery Operations Milestone (Prompt 27)
+
+### Added
+- **Database Schema Batch 12 (`CreateProjectManagementAndDeliverySchema.php`)**:
+  - Implemented 15 relational tables: `project_clients`, `project_client_contacts`, `projects`, `project_team_members`, `project_briefs`, `project_scopes`, `project_milestones`, `project_deliverables`, `project_risks`, `project_issues`, `project_change_requests`, `project_resource_allocations`, `project_status_history`, `project_templates`, `project_audit_events`.
+  - Added seamless `workforce_tasks` extension with `project_id` and `milestone_id` foreign keys (zero duplicate task engine).
+  - Short foreign key constraint names applied across all tables to guarantee MySQL/MariaDB 64-char identifier limit compliance.
+- **Database Seeder (`ProjectManagementSeeder.php`)**:
+  - Seeded 2 Clients (`CLI-CORP-001` PT Digital Nusantara Mandiri and `CLI-GOV-001` Diskominfo Prov).
+  - Seeded 3 Client Key Stakeholder Contacts (CTO, VP of Engineering, PPK).
+  - Seeded 2 Customer Projects (`PRJ-CUST-2026-001` Knowledge Portal and `PRJ-CUST-2026-002` Smart City).
+  - Seeded 2 Internal Initiatives (`PRJ-INT-2026-001` VHQ Phase 2 and `PRJ-INT-2026-002` Workforce Skills Benchmark).
+  - Seeded multi-disciplinary workforce team allocations (Human Owner sponsor, Lead Architects, Senior Developers, QA Engineers).
+  - Seeded briefs, versioned scope baselines, milestones with critical path indicators, deliverables with review/acceptance statuses, risks, issues, change requests, resource allocations, and lifecycle status history.
+- **Backend Domain Services**:
+  - `ProjectAccessService.php`: 4-tier security classification enforcement (`public`, `internal`, `confidential`, `restricted`), client boundary isolation, and granular role permissions (`view`, `edit`, `approve_stage`, `manage_budget`, `review_deliverable`, etc.).
+  - `ProjectService.php`: Master project management, portfolio metrics aggregation, progress recalculation algorithm combining milestones (60%) and linked tasks (40%), bi-directional task linking.
+  - `ProjectLifecycleService.php`: State machine validating 9 customer project stages (`lead` to `warranty_support`) and 7 internal initiative stages (`idea_proposal` to `completed_archived`) with automated transition history audit.
+  - `ClientManagementService.php`: Customer profile directories and stakeholder contact directories.
+  - `ScopeDeliverableService.php`: Project briefs, versioned scope baselines, milestone sequencing, deliverable technical review and external client acceptance sign-off.
+  - `ProjectRiskIssueService.php`: Risk register with probability/impact matrix, blocker tracking and resolution plans, and Change Request governance under DoA.
+  - `ProjectResourceBudgetService.php`: Workforce team assignments, compute/infrastructure resource pools, and financial budget control.
+- **REST API Controller & Routes**:
+  - `ProjectController.php`: 32 RESTful endpoints under `/api/v1/projects/*` with standardized envelopes and auth filters.
+- **Frontend Integration**:
+  - `project.ts`: Complete TypeScript types and interfaces.
+  - `projectService.ts`: API client service for all 32 endpoints.
+  - `ProjectManagementView.tsx`: Interactive project workspace with Portfolio Overview, Table/Kanban views, 6-tab Workspace drill-down, Client Directory, and modals.
+  - Mounted in `NavigationHeader.tsx` and `App.tsx`.
+- **Testing & Quality Assurance**:
+  - `ProjectManagementTest.php`: 12 PHPUnit tests, 95 assertions passing 100% (111 total backend tests, 790 assertions passing 100%).
+  - `scripts/test_backend.php`: Section 15 added with 40 integration endpoints (241/241 REST endpoints passing 100%).
+  - `npm --prefix frontend run build`: Clean production compilation with Vite (0 errors).
+- **Documentation**:
+  - `docs/architecture/PROJECT-MANAGEMENT-ARCHITECTURE.md`
+  - `docs/architecture/PROJECT-LIFECYCLE-STATE-MACHINE.md`
+  - `docs/architecture/CLIENT-ENGAGEMENT-MODEL.md`
+  - `docs/architecture/PROJECT-TASK-INTEGRATION.md`
+  - `docs/architecture/PROJECT-GOVERNANCE-FINANCIAL-CONTROL.md`
+  - `docs/operations/PROJECT-MANAGEMENT-OPERATIONS.md`
+  - `docs/api/PROJECT-MANAGEMENT-API.md`
+  - `docs/implementation/PROJECT-MANAGEMENT-IMPLEMENTATION.md`
+  - `docs/implementation/PROJECT-MANAGEMENT-READINESS.md`
+
 ## [0.11.0] - 2026-11-20 — Internal Communication, Executive Coordination, Meetings & Organizational Collaboration Milestone (Prompt 26)
 
 ### Added

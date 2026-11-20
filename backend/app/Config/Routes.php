@@ -375,4 +375,65 @@ $routes->group('api/v1', static function ($routes) {
             $routes->post('notifications/read-all', 'Api\CollaborationController::markAllNotificationsRead');
         });
     });
+
+    // Project Management, Client Engagement, Project Lifecycle & Delivery Operations (Prompt 27)
+    $routes->group('projects', static function ($routes) {
+        $routes->get('portfolio-metrics', 'Api\ProjectController::portfolioMetrics');
+        $routes->get('clients', 'Api\ProjectController::listClients');
+        $routes->get('clients/(:num)', 'Api\ProjectController::showClient/$1');
+        $routes->get('clients/(:num)/contacts', 'Api\ProjectController::listContacts/$1');
+        $routes->get('', 'Api\ProjectController::index');
+        $routes->get('(:num)', 'Api\ProjectController::show/$1');
+        $routes->get('(:num)/status-history', 'Api\ProjectController::statusHistory/$1');
+        $routes->get('(:num)/tasks', 'Api\ProjectController::getLinkedTasks/$1');
+        $routes->get('(:num)/brief', 'Api\ProjectController::getBrief/$1');
+        $routes->get('(:num)/scopes', 'Api\ProjectController::getScopes/$1');
+        $routes->get('(:num)/milestones', 'Api\ProjectController::getMilestones/$1');
+        $routes->get('(:num)/deliverables', 'Api\ProjectController::getDeliverables/$1');
+        $routes->get('(:num)/risks', 'Api\ProjectController::getRisks/$1');
+        $routes->get('(:num)/issues', 'Api\ProjectController::getIssues/$1');
+        $routes->get('(:num)/change-requests', 'Api\ProjectController::getChangeRequests/$1');
+        $routes->get('(:num)/team', 'Api\ProjectController::getTeam/$1');
+        $routes->get('(:num)/resources', 'Api\ProjectController::getResources/$1');
+        $routes->get('(:num)/budget', 'Api\ProjectController::getBudget/$1');
+
+        $routes->group('', ['filter' => 'mce_auth'], static function ($routes) {
+            $routes->post('', 'Api\ProjectController::create');
+            $routes->put('(:num)', 'Api\ProjectController::update/$1');
+            $routes->delete('(:num)', 'Api\ProjectController::delete/$1');
+            $routes->post('(:num)/transition', 'Api\ProjectController::transitionStage/$1');
+            $routes->post('(:num)/tasks/link', 'Api\ProjectController::linkTask/$1');
+            $routes->post('(:num)/tasks/unlink', 'Api\ProjectController::unlinkTask/$1');
+            $routes->post('(:num)/recalculate-progress', 'Api\ProjectController::recalculateProgress/$1');
+            $routes->post('clients', 'Api\ProjectController::createClient');
+            $routes->put('clients/(:num)', 'Api\ProjectController::updateClient/$1');
+            $routes->post('clients/(:num)/contacts', 'Api\ProjectController::createContact/$1');
+            $routes->put('clients/contacts/(:num)', 'Api\ProjectController::updateContact/$1');
+            $routes->delete('clients/contacts/(:num)', 'Api\ProjectController::deleteContact/$1');
+            $routes->post('(:num)/brief', 'Api\ProjectController::upsertBrief/$1');
+            $routes->post('(:num)/scopes/baseline', 'Api\ProjectController::createScopeBaseline/$1');
+            $routes->post('(:num)/milestones', 'Api\ProjectController::createMilestone/$1');
+            $routes->put('milestones/(:num)', 'Api\ProjectController::updateMilestone/$1');
+            $routes->delete('milestones/(:num)', 'Api\ProjectController::deleteMilestone/$1');
+            $routes->post('(:num)/deliverables', 'Api\ProjectController::createDeliverable/$1');
+            $routes->put('deliverables/(:num)', 'Api\ProjectController::updateDeliverable/$1');
+            $routes->post('deliverables/(:num)/submit', 'Api\ProjectController::submitDeliverable/$1');
+            $routes->post('deliverables/(:num)/review', 'Api\ProjectController::reviewDeliverable/$1');
+            $routes->post('deliverables/(:num)/client-accept', 'Api\ProjectController::clientAcceptDeliverable/$1');
+            $routes->post('(:num)/risks', 'Api\ProjectController::createRisk/$1');
+            $routes->put('risks/(:num)', 'Api\ProjectController::updateRisk/$1');
+            $routes->delete('risks/(:num)', 'Api\ProjectController::deleteRisk/$1');
+            $routes->post('(:num)/issues', 'Api\ProjectController::createIssue/$1');
+            $routes->put('issues/(:num)', 'Api\ProjectController::updateIssue/$1');
+            $routes->post('issues/(:num)/resolve', 'Api\ProjectController::resolveIssue/$1');
+            $routes->post('(:num)/change-requests', 'Api\ProjectController::createChangeRequest/$1');
+            $routes->post('change-requests/(:num)/evaluate', 'Api\ProjectController::evaluateChangeRequest/$1');
+            $routes->post('(:num)/team', 'Api\ProjectController::addTeamMember/$1');
+            $routes->put('team/(:num)', 'Api\ProjectController::updateTeamMember/$1');
+            $routes->delete('team/(:num)', 'Api\ProjectController::removeTeamMember/$1');
+            $routes->post('(:num)/resources', 'Api\ProjectController::addResource/$1');
+            $routes->post('resources/(:num)/utilization', 'Api\ProjectController::updateResourceUtilization/$1');
+            $routes->put('(:num)/budget', 'Api\ProjectController::updateBudget/$1');
+        });
+    });
 });

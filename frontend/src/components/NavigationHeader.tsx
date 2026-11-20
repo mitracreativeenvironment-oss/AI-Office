@@ -2,8 +2,8 @@ import React from 'react';
 import type { User } from '../types/auth';
 
 interface NavigationHeaderProps {
-  currentView: 'dashboard' | 'vhq' | 'runtime' | 'welfare' | 'knowledge' | 'collaboration';
-  onNavigate: (view: 'dashboard' | 'vhq' | 'runtime' | 'welfare' | 'knowledge' | 'collaboration') => void;
+  currentView: 'dashboard' | 'vhq' | 'runtime' | 'welfare' | 'knowledge' | 'collaboration' | 'projects';
+  onNavigate: (view: 'dashboard' | 'vhq' | 'runtime' | 'welfare' | 'knowledge' | 'collaboration' | 'projects') => void;
   apiStatus: 'checking' | 'online' | 'degraded' | 'offline';
   latencyMs: number | null;
   user: User | null;
@@ -112,6 +112,14 @@ export const NavigationHeader: React.FC<NavigationHeaderProps> = ({
         >
           <span className="mce-nav-icon">💬</span>
           Collaboration & Board
+        </button>
+        <button
+          type="button"
+          className={`mce-nav-btn ${currentView === 'projects' ? 'mce-nav-btn-active' : ''}`}
+          onClick={() => onNavigate('projects')}
+        >
+          <span className="mce-nav-icon">🚀</span>
+          Projects & Delivery
         </button>
       </nav>
 

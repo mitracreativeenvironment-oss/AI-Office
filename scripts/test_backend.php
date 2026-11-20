@@ -1527,7 +1527,321 @@ $ok = ($code === 200) && isset($json['data']['total_results']) && ($json['data']
 reportTest('GET', '/collaboration/search?q=Board', 200, $code, 'Perform Unified Multi-Entity Cross-Domain Collaboration Search', $ok, $pass, $total);
 
 // -----------------------------------------------------------------------------
-// 15. Token Revocation
+// 15. Project Management, Client Engagement, Project Lifecycle & Delivery Operations (Prompt 27)
+// -----------------------------------------------------------------------------
+
+// 1. Portfolio Metrics
+[$code, $json] = requestHttp($baseUrl . '/projects/portfolio-metrics', 'GET', null, $authToken);
+$ok = ($code === 200) && isset($json['data']['total_projects']) && ($json['data']['total_projects'] >= 1);
+reportTest('GET', '/projects/portfolio-metrics', 200, $code, 'Retrieve Global Project Portfolio & Financial Metrics', $ok, $pass, $total);
+
+// 2. List All Projects
+[$code, $json] = requestHttp($baseUrl . '/projects', 'GET', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/projects', 200, $code, 'List All Organizational Projects (Customer & Internal)', $ok, $pass, $total);
+
+// 3. Filter Customer Projects
+[$code, $json] = requestHttp($baseUrl . '/projects?project_type=customer_project', 'GET', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/projects?project_type=customer_project', 200, $code, 'Filter External Customer Projects with Client Metadata', $ok, $pass, $total);
+
+// 4. Filter Internal Initiatives
+[$code, $json] = requestHttp($baseUrl . '/projects?project_type=internal_initiative', 'GET', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/projects?project_type=internal_initiative', 200, $code, 'Filter Internal MCE Initiatives under Executive Board Governance', $ok, $pass, $total);
+
+// 5. List Clients
+[$code, $json] = requestHttp($baseUrl . '/projects/clients', 'GET', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', '/projects/clients', 200, $code, 'List Customer Profiles with Engagement Statistics', $ok, $pass, $total);
+
+// 6. Create New Client
+[$code, $json] = requestHttp($baseUrl . '/projects/clients', 'POST', [
+    'company_name' => 'PT Solusi Finansial Global',
+    'industry'     => 'Fintech & Payments',
+    'status'       => 'active',
+    'notes'        => 'Enterprise client for AI payment automation',
+], $authToken);
+$testClientId = $json['data']['id'] ?? 1;
+$ok = ($code === 201) && !empty($json['data']['client_code']);
+reportTest('POST', '/projects/clients', 201, $code, 'Register New Enterprise Customer Client Profile', $ok, $pass, $total);
+
+// 7. Get Single Client Details
+[$code, $json] = requestHttp($baseUrl . "/projects/clients/{$testClientId}", 'GET', null, $authToken);
+$ok = ($code === 200) && (($json['data']['id'] ?? null) === $testClientId);
+reportTest('GET', "/projects/clients/{$testClientId}", 200, $code, 'Retrieve Detailed Client Profile with Contacts & Projects', $ok, $pass, $total);
+
+// 8. Update Client Profile
+[$code, $json] = requestHttp($baseUrl . "/projects/clients/{$testClientId}", 'PUT', [
+    'industry' => 'Fintech, WealthTech & Payments',
+], $authToken);
+$ok = ($code === 200) && (($json['data']['industry'] ?? '') === 'Fintech, WealthTech & Payments');
+reportTest('PUT', "/projects/clients/{$testClientId}", 200, $code, 'Update Enterprise Client Profile Information', $ok, $pass, $total);
+
+// 9. List Client Contacts
+[$code, $json] = requestHttp($baseUrl . "/projects/clients/{$testClientId}/contacts", 'GET', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']);
+reportTest('GET', "/projects/clients/{$testClientId}/contacts", 200, $code, 'List Stakeholder Contacts Associated with Client', $ok, $pass, $total);
+
+// 10. Add Client Contact
+[$code, $json] = requestHttp($baseUrl . "/projects/clients/{$testClientId}/contacts", 'POST', [
+    'full_name'  => 'Andi Wijaya, S.T.',
+    'job_title'  => 'VP of Digital Transformation',
+    'email'      => 'andi.wijaya@solusifinansial.co.id',
+    'phone'      => '+62 811-9988-7766',
+    'is_primary' => 1,
+], $authToken);
+$testContactId = $json['data']['id'] ?? 1;
+$ok = ($code === 201) && (($json['data']['full_name'] ?? '') === 'Andi Wijaya, S.T.');
+reportTest('POST', "/projects/clients/{$testClientId}/contacts", 201, $code, 'Register Client Key Stakeholder & Decision Maker Contact', $ok, $pass, $total);
+
+// 11. Create Customer Project
+[$code, $json] = requestHttp($baseUrl . '/projects', 'POST', [
+    'name'                  => 'AI Payment Risk Analytics Engine',
+    'project_type'          => 'customer_project',
+    'category'              => 'ai_automation',
+    'client_id'             => $testClientId,
+    'description'           => 'Real-time payment fraud anomaly detection with RAG explainability',
+    'proposed_budget'       => 65000000.00,
+    'approved_budget_limit' => 60000000.00,
+    'priority'              => 'high',
+], $authToken);
+$testPrjId = $json['data']['id'] ?? 1;
+$ok = ($code === 201) && !empty($json['data']['project_code']);
+reportTest('POST', '/projects', 201, $code, 'Create New Customer Project with Bound Client & Budget Limit', $ok, $pass, $total);
+
+// 12. Create Internal Initiative (DoA Level B Autonomous)
+[$code, $json] = requestHttp($baseUrl . '/projects', 'POST', [
+    'name'                  => 'Automated Code Review Assistant Workflow',
+    'project_type'          => 'internal_initiative',
+    'category'              => 'rnd',
+    'description'           => 'Internal tool pipeline for multi-agent automated PR security checks',
+    'proposed_budget'       => 3500000.00,
+    'approved_budget_limit' => 3500000.00,
+    'sponsoring_authority'  => 'continuous_executive_board',
+], $authToken);
+$testIntPrjId = $json['data']['id'] ?? 2;
+$ok = ($code === 201) && ($json['data']['project_type'] === 'internal_initiative');
+reportTest('POST', '/projects (Internal Initiative)', 201, $code, 'Create Internal MCE Initiative Authorized under DoA Level B', $ok, $pass, $total);
+
+// 13. Show Project Detail
+[$code, $json] = requestHttp($baseUrl . "/projects/{$testPrjId}", 'GET', null, $authToken);
+$ok = ($code === 200) && (($json['data']['id'] ?? null) === $testPrjId);
+reportTest('GET', "/projects/{$testPrjId}", 200, $code, 'Retrieve Full Project Workspace Detail with Sub-Entities', $ok, $pass, $total);
+
+// 14. Update Project Metadata
+[$code, $json] = requestHttp($baseUrl . "/projects/{$testPrjId}", 'PUT', [
+    'priority'      => 'urgent',
+    'health_status' => 'healthy',
+], $authToken);
+$ok = ($code === 200) && (($json['data']['priority'] ?? '') === 'urgent');
+reportTest('PUT', "/projects/{$testPrjId}", 200, $code, 'Update Project Attributes & Operational Health Status', $ok, $pass, $total);
+
+// 15. Transition Lifecycle Stage
+[$code, $json] = requestHttp($baseUrl . "/projects/{$testPrjId}/transition", 'POST', [
+    'target_stage' => 'qualification',
+    'reason'       => 'Technical requirements discovery session conducted with client CTO',
+], $authToken);
+$ok = ($code === 200) && (($json['data']['lifecycle_stage'] ?? '') === 'qualification');
+reportTest('POST', "/projects/{$testPrjId}/transition", 200, $code, 'Advance Project Lifecycle Stage according to State Machine', $ok, $pass, $total);
+
+// 16. Get Status Transition History
+[$code, $json] = requestHttp($baseUrl . "/projects/{$testPrjId}/status-history", 'GET', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', "/projects/{$testPrjId}/status-history", 200, $code, 'Audit Log of Project State Transitions & Governance Reasons', $ok, $pass, $total);
+
+// 17. Upsert Project Brief
+[$code, $json] = requestHttp($baseUrl . "/projects/{$testPrjId}/brief", 'POST', [
+    'background'          => 'Client processing 1M daily card transactions requiring sub-second risk scoring.',
+    'business_objectives' => 'Reduce false positive rate by 45% and latency < 350ms.',
+    'success_criteria'    => 'Achieve F1-score >= 0.94 in production pilot.',
+], $authToken);
+$ok = ($code === 200) && !empty($json['data']['business_objectives']);
+reportTest('POST', "/projects/{$testPrjId}/brief", 200, $code, 'Document Formal Project Brief & Measurable Business Objectives', $ok, $pass, $total);
+
+// 18. Retrieve Project Brief
+[$code, $json] = requestHttp($baseUrl . "/projects/{$testPrjId}/brief", 'GET', null, $authToken);
+$ok = ($code === 200) && isset($json['data']['project_id']);
+reportTest('GET', "/projects/{$testPrjId}/brief", 200, $code, 'Fetch Approved Project Brief Specification', $ok, $pass, $total);
+
+// 19. Create Scope Baseline
+[$code, $json] = requestHttp($baseUrl . "/projects/{$testPrjId}/scopes/baseline", 'POST', [
+    'version_number'    => '1.0',
+    'scope_summary'     => 'Core Risk Engine API and Real-Time Event Pipeline Baseline',
+    'in_scope_items'    => ['Feature Pipeline', 'Model Serving API', 'Client Webhook'],
+    'out_of_scope_items'=> ['Core Banking Core Modification'],
+    'is_baseline'       => 1,
+], $authToken);
+$ok = ($code === 201) && (($json['data']['version_number'] ?? '') === '1.0');
+reportTest('POST', "/projects/{$testPrjId}/scopes/baseline", 201, $code, 'Establish Authorized Project Scope Baseline Version', $ok, $pass, $total);
+
+// 20. List Scopes
+[$code, $json] = requestHttp($baseUrl . "/projects/{$testPrjId}/scopes", 'GET', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', "/projects/{$testPrjId}/scopes", 200, $code, 'List Versioned Scope Baselines for Scope Control', $ok, $pass, $total);
+
+// 21. Create Project Milestone
+[$code, $json] = requestHttp($baseUrl . "/projects/{$testPrjId}/milestones", 'POST', [
+    'title'            => 'Phase 1: High-Throughput Ingestion Engine',
+    'description'      => 'Kafka and Redis pipeline processing 2,000 TPS benchmark',
+    'target_date'      => date('Y-m-d', strtotime('+20 days')),
+    'is_critical_path' => 1,
+], $authToken);
+$testMsId = $json['data']['id'] ?? 1;
+$ok = ($code === 201) && ((int)($json['data']['is_critical_path'] ?? 0) === 1);
+reportTest('POST', "/projects/{$testPrjId}/milestones", 201, $code, 'Define Critical Path Project Milestone', $ok, $pass, $total);
+
+// 22. List Milestones
+[$code, $json] = requestHttp($baseUrl . "/projects/{$testPrjId}/milestones", 'GET', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', "/projects/{$testPrjId}/milestones", 200, $code, 'List Project Milestones Ordered by Sequence & Timeline', $ok, $pass, $total);
+
+// 23. Create Deliverable
+[$code, $json] = requestHttp($baseUrl . "/projects/{$testPrjId}/deliverables", 'POST', [
+    'milestone_id'            => $testMsId,
+    'title'                   => 'Transaction Anomaly Detection Model Service',
+    'description'             => 'Containerized inference service exposing gRPC endpoint',
+    'due_date'                => date('Y-m-d', strtotime('+15 days')),
+    'acceptance_criteria'     => 'Latency < 250ms at 2,000 TPS load test',
+    'supporting_evidence_url' => 'https://artifacts.mce.local/models/risk-v1.tar.gz',
+], $authToken);
+$testDelId = $json['data']['id'] ?? 1;
+$ok = ($code === 201) && !empty($json['data']['deliverable_code']);
+reportTest('POST', "/projects/{$testPrjId}/deliverables", 201, $code, 'Register Verifiable Deliverable Linked to Milestone', $ok, $pass, $total);
+
+// 24. Submit Deliverable for Review
+[$code, $json] = requestHttp($baseUrl . "/projects/deliverables/{$testDelId}/submit", 'POST', [
+    'supporting_evidence_url' => 'https://artifacts.mce.local/models/risk-v1-verified.tar.gz',
+], $authToken);
+$ok = ($code === 200) && (($json['data']['review_status'] ?? '') === 'submitted');
+reportTest('POST', "/projects/deliverables/{$testDelId}/submit", 200, $code, 'Submit Deliverable for Technical & Quality Review', $ok, $pass, $total);
+
+// 25. Review Deliverable (Approve)
+[$code, $json] = requestHttp($baseUrl . "/projects/deliverables/{$testDelId}/review", 'POST', [
+    'review_status' => 'accepted',
+    'feedback'      => 'Benchmark verified with zero packet loss.',
+], $authToken);
+$ok = ($code === 200) && (($json['data']['review_status'] ?? '') === 'accepted');
+reportTest('POST', "/projects/deliverables/{$testDelId}/review", 200, $code, 'Complete Deliverable Technical Review and Quality Sign-Off', $ok, $pass, $total);
+
+// 26. Client Accept Deliverable
+[$code, $json] = requestHttp($baseUrl . "/projects/deliverables/{$testDelId}/client-accept", 'POST', null, $authToken);
+$ok = ($code === 200) && ((int)($json['data']['client_accepted'] ?? 0) === 1);
+reportTest('POST', "/projects/deliverables/{$testDelId}/client-accept", 200, $code, 'Record Formal External Client Deliverable Acceptance', $ok, $pass, $total);
+
+// 27. Log Project Risk
+[$code, $json] = requestHttp($baseUrl . "/projects/{$testPrjId}/risks", 'POST', [
+    'title'           => 'Card Scheme API Specification Breaking Update',
+    'description'     => 'Upstream payload schema change expected next quarter',
+    'probability'     => 'medium',
+    'impact'          => 'high',
+    'mitigation_plan' => 'Implement adaptive payload transformer layer',
+], $authToken);
+$testRiskId = $json['data']['id'] ?? 1;
+$ok = ($code === 201) && !empty($json['data']['risk_code']);
+reportTest('POST', "/projects/{$testPrjId}/risks", 201, $code, 'Register Project Risk with Mitigation Strategy', $ok, $pass, $total);
+
+// 28. List Project Risks
+[$code, $json] = requestHttp($baseUrl . "/projects/{$testPrjId}/risks", 'GET', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', "/projects/{$testPrjId}/risks", 200, $code, 'List Project Risks with Severity and Probability Analysis', $ok, $pass, $total);
+
+// 29. Log Project Issue
+[$code, $json] = requestHttp($baseUrl . "/projects/{$testPrjId}/issues", 'POST', [
+    'title'       => 'Staging Kafka Cluster Partition Lag on Burst Testing',
+    'description' => 'Consumer lag increased to 12,000 messages during stress run',
+    'severity'    => 'major',
+    'priority'    => 'high',
+], $authToken);
+$testIssueId = $json['data']['id'] ?? 1;
+$ok = ($code === 201) && (($json['data']['status'] ?? '') === 'open');
+reportTest('POST', "/projects/{$testPrjId}/issues", 201, $code, 'Log Operational Issue & Delivery Blocker', $ok, $pass, $total);
+
+// 30. Resolve Project Issue
+[$code, $json] = requestHttp($baseUrl . "/projects/issues/{$testIssueId}/resolve", 'POST', [
+    'resolution_plan' => 'Scaled Kafka consumer group from 4 to 12 workers with zero lag.',
+], $authToken);
+$ok = ($code === 200) && (($json['data']['status'] ?? '') === 'resolved');
+reportTest('POST', "/projects/issues/{$testIssueId}/resolve", 200, $code, 'Record Issue Resolution & Mitigation Implementation', $ok, $pass, $total);
+
+// 31. Create Change Request
+[$code, $json] = requestHttp($baseUrl . "/projects/{$testPrjId}/change-requests", 'POST', [
+    'title'                  => 'Add Support for QRIS Payment Anomaly Scoring',
+    'description'            => 'Extend risk engine to evaluate dynamic QR payment payloads',
+    'business_justification' => 'QRIS transaction volume surged 60% this year',
+    'budget_impact_amount'   => 4500000.00,
+    'schedule_impact_days'   => 4,
+    'approval_level'         => 'B',
+], $authToken);
+$testCrId = $json['data']['id'] ?? 1;
+$ok = ($code === 201) && !empty($json['data']['change_code']);
+reportTest('POST', "/projects/{$testPrjId}/change-requests", 201, $code, 'Submit Scope Change Request with Budget & Timeline Impact', $ok, $pass, $total);
+
+// 32. Evaluate Change Request (Approve under DoA Level B)
+[$code, $json] = requestHttp($baseUrl . "/projects/change-requests/{$testCrId}/evaluate", 'POST', [
+    'decision'  => 'approved',
+    'rationale' => 'Approved by Continuous Executive Board within DoA Level B ceiling',
+], $authToken);
+$ok = ($code === 200) && (($json['data']['status'] ?? '') === 'approved');
+reportTest('POST', "/projects/change-requests/{$testCrId}/evaluate", 200, $code, 'Authorize Change Request under Delegated Authority (DoA)', $ok, $pass, $total);
+
+// 33. Retrieve Project Team Members
+[$code, $json] = requestHttp($baseUrl . "/projects/{$testPrjId}/team", 'GET', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']);
+reportTest('GET', "/projects/{$testPrjId}/team", 200, $code, 'List Assigned Human & AI Agent Project Workforce Team', $ok, $pass, $total);
+
+// 34. Assign Workforce Member to Project
+[$code, $json] = requestHttp($baseUrl . "/projects/{$testPrjId}/team", 'POST', [
+    'member_type'           => 'agent',
+    'agent_id'              => 2,
+    'project_role'          => 'delivery_lead',
+    'allocation_percentage' => 80,
+], $authToken);
+$testMemberId = $json['data']['id'] ?? null;
+$ok = ($code === 201) && (($json['data']['project_role'] ?? '') === 'delivery_lead');
+reportTest('POST', "/projects/{$testPrjId}/team", 201, $code, 'Assign AI Agent with Designated Project Delivery Role', $ok, $pass, $total);
+
+// 35. Retrieve Resource Allocations
+[$code, $json] = requestHttp($baseUrl . "/projects/{$testPrjId}/resources", 'GET', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']);
+reportTest('GET', "/projects/{$testPrjId}/resources", 200, $code, 'List Project Resource Allocations & Runtime Budgets', $ok, $pass, $total);
+
+// 36. Add Resource Allocation
+[$code, $json] = requestHttp($baseUrl . "/projects/{$testPrjId}/resources", 'POST', [
+    'resource_type'            => 'ai_agent_runtime',
+    'resource_name'            => '9Router Model Gateway High-Concurrency Pool',
+    'allocated_quantity'       => 200.00,
+    'unit_cost_idr'            => 100000.00,
+    'total_allocated_cost_idr' => 20000000.00,
+], $authToken);
+$ok = ($code === 201) && (($json['data']['total_allocated_cost_idr'] ?? 0) == 20000000);
+reportTest('POST', "/projects/{$testPrjId}/resources", 201, $code, 'Register AI Agent Compute & Infrastructure Resource Pool', $ok, $pass, $total);
+
+// 37. Retrieve Project Budget Summary
+[$code, $json] = requestHttp($baseUrl . "/projects/{$testPrjId}/budget", 'GET', null, $authToken);
+$ok = ($code === 200) && isset($json['data']['approved_budget']);
+reportTest('GET', "/projects/{$testPrjId}/budget", 200, $code, 'Audit Project Budget Governance, Spending & Remaining Ceilings', $ok, $pass, $total);
+
+// 38. Link Workforce Task to Project & Milestone
+[$code, $json] = requestHttp($baseUrl . "/projects/{$testPrjId}/tasks/link", 'POST', [
+    'task_id'      => 1,
+    'milestone_id' => $testMsId,
+], $authToken);
+$ok = ($code === 200) && (($json['data']['project_id'] ?? 0) === $testPrjId);
+reportTest('POST', "/projects/{$testPrjId}/tasks/link", 200, $code, 'Link Authoritative workforce_tasks Execution Unit to Project Milestone', $ok, $pass, $total);
+
+// 39. List Linked Workforce Tasks
+[$code, $json] = requestHttp($baseUrl . "/projects/{$testPrjId}/tasks", 'GET', null, $authToken);
+$ok = ($code === 200) && is_array($json['data']) && count($json['data']) >= 1;
+reportTest('GET', "/projects/{$testPrjId}/tasks", 200, $code, 'Retrieve Project-Linked Workforce Tasks without Engine Duplication', $ok, $pass, $total);
+
+// 40. Auto-Recalculate Project Progress
+[$code, $json] = requestHttp($baseUrl . "/projects/{$testPrjId}/recalculate-progress", 'POST', null, $authToken);
+$ok = ($code === 200) && isset($json['data']['progress_percent']);
+reportTest('POST', "/projects/{$testPrjId}/recalculate-progress", 200, $code, 'Trigger Mathematical Progress Recalculation from Tasks & Milestones', $ok, $pass, $total);
+
+// -----------------------------------------------------------------------------
+// 16. Token Revocation
 // -----------------------------------------------------------------------------
 [$code, $json] = requestHttp($baseUrl . '/auth/logout', 'POST', null, $authToken);
 $ok = ($code === 200) && (($json['data']['revoked'] ?? false) === true);
