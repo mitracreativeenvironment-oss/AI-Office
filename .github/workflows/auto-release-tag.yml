@@ -1,0 +1,191 @@
+name: CI/CD Release & Tag Automation
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release-and-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Analyze Commit and Version Changes
+        id: change_analysis
+        shell: bash
+        run: |
+          set -e
+
+          # 1. Check if trigger was a direct tag push
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            TAG_NAME="${GITHUB_REF#refs/tags/}"
+            echo "is_tag_push=true" >> "$GITHUB_OUTPUT"
+            echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+            echo "is_version_change=true" >> "$GITHUB_OUTPUT"
+            echo "Triggered directly by tag: $TAG_NAME"
+            exit 0
+          fi
+
+          echo "is_tag_push=false" >> "$GITHUB_OUTPUT"
+
+          # 2. Determine previous commit to compare
+          BEFORE="${{ github.event.before }}"
+          IS_VERSION_CHANGE=false
+
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            echo "Initial commit or new branch detected. Checking VERSION file..."
+            if [ -f "VERSION" ]; then
+              IS_VERSION_CHANGE=true
+            fi
+          else
+            echo "Comparing changes between $BEFORE and ${{ github.sha }}..."
+            # Check if VERSION or package.json was modified
+            CHANGED_FILES=$(git diff --name-only "$BEFORE" "${{ github.sha }}")
+            echo "Changed files:"
+            echo "$CHANGED_FILES"
+
+            if echo "$CHANGED_FILES" | grep -E -q '^(VERSION|package\.json)$'; then
+              IS_VERSION_CHANGE=true
+            fi
+          fi
+
+          # Also detect version bump in commit message (e.g. "[bump] v1.0.1" or "Release v1.0.1")
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          if echo "$COMMIT_MSG" | grep -Ei -q '^(\[bump\]|release[:(]|bump[:(])'; then
+            IS_VERSION_CHANGE=true
+          fi
+
+          echo "is_version_change=$IS_VERSION_CHANGE" >> "$GITHUB_OUTPUT"
+
+          # 3. Read target version if version changed
+          if [ "$IS_VERSION_CHANGE" = "true" ]; then
+            RAW_VER=""
+            if [ -f "VERSION" ]; then
+              RAW_VER=$(cat VERSION | tr -d '[:space:]')
+            elif [ -f "package.json" ]; then
+              RAW_VER=$(jq -r '.version // empty' package.json 2>/dev/null || echo "")
+            fi
+
+            if [ -n "$RAW_VER" ]; then
+              if [[ "$RAW_VER" == v* ]]; then
+                TARGET_TAG="$RAW_VER"
+              else
+                TARGET_TAG="v$RAW_VER"
+              fi
+              echo "tag_name=$TARGET_TAG" >> "$GITHUB_OUTPUT"
+              echo "Detected target version tag: $TARGET_TAG"
+            else
+              echo "Version change detected but no valid version found in VERSION or package.json."
+              echo "is_version_change=false" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      # -------------------------------------------------------------
+      # SCENARIO A: Perubahan Versi -> Update Git Tag & Official Release
+      # -------------------------------------------------------------
+      - name: Handle Version Change (Create Tag & GitHub Release)
+        if: steps.change_analysis.outputs.is_version_change == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ steps.change_analysis.outputs.tag_name }}
+          IS_TAG_PUSH: ${{ steps.change_analysis.outputs.is_tag_push }}
+        shell: bash
+        run: |
+          set -e
+          if [ -z "$TAG_NAME" ]; then
+            echo "No tag specified, aborting version release."
+            exit 1
+          fi
+
+          echo "Executing version change workflow for tag: $TAG_NAME"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create and push git tag if it does not exist yet
+          if [ "$IS_TAG_PUSH" != "true" ]; then
+            if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+              echo "Tag $TAG_NAME already exists locally."
+            else
+              echo "Creating Git Tag: $TAG_NAME"
+              git tag -a "$TAG_NAME" -m "Version Release $TAG_NAME"
+              git push origin "$TAG_NAME"
+            fi
+          fi
+
+          # Create or update official GitHub Release for this version
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Release $TAG_NAME already exists. Updating notes..."
+            gh release edit "$TAG_NAME" --generate-notes
+          else
+            echo "Creating official GitHub Release: $TAG_NAME"
+            gh release create "$TAG_NAME" \
+              --title "Release $TAG_NAME" \
+              --generate-notes \
+              --latest
+          fi
+
+      # -------------------------------------------------------------
+      # SCENARIO B: Perubahan Non-Versi -> Update Rolling / Continuous Release
+      # -------------------------------------------------------------
+      - name: Handle Non-Version Change (Update Rolling Release)
+        if: steps.change_analysis.outputs.is_version_change == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -e
+          echo "Executing non-version change workflow. Updating continuous rolling release..."
+
+          ROLLING_TAG="rolling-release"
+          TIMESTAMP=$(date -u +'%Y-%m-%d %H:%M UTC')
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Point rolling tag to the latest commit on main and push force
+          git tag -f "$ROLLING_TAG" "${{ github.sha }}"
+          git push origin "$ROLLING_TAG" --force
+
+          RELEASE_TITLE="Rolling Build / Continuous Release (${TIMESTAMP})"
+
+          cat << 'EOF' > release_body.md
+          ### Continuous Updates (Non-Version Changes)
+
+          Perubahan non-versi terbaru pada branch `main`:
+
+          - **Commit**: [`${{ github.sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
+          - **Commit Message**: ${{ github.event.head_commit.message }}
+          - **Author**: ${{ github.actor }}
+          - **Timestamp**: ${TIMESTAMP}
+
+          ---
+          > *Release ini diperbarui secara otomatis setiap kali ada commit/perubahan non-versi (tanpa bump VERSION) di branch main.*
+          EOF
+
+          # Replace variable in release_body.md
+          sed -i "s|\${TIMESTAMP}|$TIMESTAMP|g" release_body.md
+
+          if gh release view "$ROLLING_TAG" >/dev/null 2>&1; then
+            echo "Updating existing rolling release..."
+            gh release edit "$ROLLING_TAG" \
+              --title "$RELEASE_TITLE" \
+              --notes-file release_body.md \
+              --prerelease
+          else
+            echo "Creating new rolling release..."
+            gh release create "$ROLLING_TAG" \
+              --title "$RELEASE_TITLE" \
+              --notes-file release_body.md \
+              --prerelease
+          fi

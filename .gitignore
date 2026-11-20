@@ -1,0 +1,30 @@
+# Deploy Keys and Private Credentials
+.deploy_key/
+*.pem
+*.key
+*.pub
+
+# Environment and Secrets
+.env
+.env.*
+!.env.example
+
+# Operating System Files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.suo
+*.user
+
+# Build and Dependencies (common stacks)
+node_modules/
+dist/
+build/
+__pycache__/
+*.pyc
+.venv/
+venv/
