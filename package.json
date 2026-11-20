@@ -8,6 +8,8 @@
     "dev": "npm --prefix frontend run dev",
     "build": "npm --prefix frontend run build",
     "test": "node scripts/test.mjs",
+    "test:backend": "php scripts/test_backend.php",
+    "test:all": "node scripts/test.mjs && php scripts/test_backend.php",
     "rekam": "node scripts/rekam.mjs"
   }
 }
